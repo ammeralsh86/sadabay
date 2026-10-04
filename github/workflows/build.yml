@@ -34,3 +34,4 @@ jobs:
         with:
           name: mada-pay-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+          
