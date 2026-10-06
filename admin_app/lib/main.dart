@@ -125,7 +125,7 @@ class Permissions {
       auditLog: true,
       systemSettings: true,
     );
-  });
+  }
 }
 
 // ============================================================
@@ -218,8 +218,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       return;
     }
 
-    // دخول تجريبي للمالك فقط.
-    // سيتم استبداله بالمصادقة الحقيقية من الخادم.
     if (phone == 'OWNER' && password == 'OWNER') {
       Navigator.pushReplacement(
         context,
