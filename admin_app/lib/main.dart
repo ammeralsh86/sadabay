@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' as intl;
 
 void main() {
   runApp(const MadaPayAdmin());
@@ -33,11 +33,9 @@ class MadaPayAdmin extends StatelessWidget {
 
 // ============================================================
 // اتجاه اللغة العربية
-// نستخدم byName لتجنب مشكلة TextDirection.rtl في بيئة البناء
 // ============================================================
 
-const TextDirection arabicDirection =
-    TextDirection.values.byName('rtl');
+const TextDirection arabicDirection = TextDirection.rtl;
 
 // ============================================================
 // الصلاحيات
@@ -310,7 +308,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                     style: TextStyle(fontSize: 18),
                   ),
                   const SizedBox(height: 35),
-
                   TextField(
                     controller: phoneController,
                     keyboardType: TextInputType.phone,
@@ -320,9 +317,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       border: OutlineInputBorder(),
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
                   TextField(
                     controller: passwordController,
                     obscureText: obscurePassword,
@@ -344,9 +339,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -358,9 +351,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
                   TextButton(
                     onPressed: () {
                       Navigator.push(
@@ -376,9 +367,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
                   const Text(
                     'ملاحظة: بيانات OWNER/OWNER للاختبار فقط، '
                     'وسيتم حذفها عند ربط النظام بالخادم.',
@@ -644,9 +633,7 @@ class _AdminRegistrationPageState
       return 'اختر التاريخ';
     }
 
-    return DateFormat(
-      'yyyy/MM/dd',
-    ).format(date);
+    return intl.DateFormat('yyyy/MM/dd').format(date);
   }
 
   @override
@@ -669,9 +656,7 @@ class _AdminRegistrationPageState
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextFormField(
                 controller: nameController,
                 decoration: decoration(
@@ -683,13 +668,10 @@ class _AdminRegistrationPageState
                       value.trim().isEmpty) {
                     return 'أدخل الاسم الكامل';
                   }
-
                   return null;
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -702,13 +684,10 @@ class _AdminRegistrationPageState
                       value.trim().isEmpty) {
                     return 'أدخل رقم الهاتف';
                   }
-
                   return null;
                 },
               ),
-
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
                 value: country,
                 decoration: decoration(
@@ -731,9 +710,7 @@ class _AdminRegistrationPageState
                   }
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: passwordController,
                 obscureText: true,
@@ -742,17 +719,13 @@ class _AdminRegistrationPageState
                   Icons.lock,
                 ),
                 validator: (value) {
-                  if (value == null ||
-                      value.length < 6) {
+                  if (value == null || value.length < 6) {
                     return 'كلمة المرور يجب ألا تقل عن 6 أحرف';
                   }
-
                   return null;
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: confirmPasswordController,
                 obscureText: true,
@@ -761,17 +734,13 @@ class _AdminRegistrationPageState
                   Icons.lock_outline,
                 ),
                 validator: (value) {
-                  if (value == null ||
-                      value.isEmpty) {
+                  if (value == null || value.isEmpty) {
                     return 'أكد كلمة المرور';
                   }
-
                   return null;
                 },
               ),
-
               const SizedBox(height: 25),
-
               const Text(
                 'نوع الحساب الإداري',
                 style: TextStyle(
@@ -779,9 +748,7 @@ class _AdminRegistrationPageState
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 10),
-
               DropdownButtonFormField<String>(
                 value: role,
                 decoration: decoration(
@@ -804,9 +771,7 @@ class _AdminRegistrationPageState
                   }
                 },
               ),
-
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
                 value: accountType,
                 decoration: decoration(
@@ -835,9 +800,7 @@ class _AdminRegistrationPageState
                   }
                 },
               ),
-
               const SizedBox(height: 25),
-
               const Text(
                 'بيانات الهوية',
                 style: TextStyle(
@@ -845,9 +808,7 @@ class _AdminRegistrationPageState
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 12),
-
               DropdownButtonFormField<String>(
                 value: identityType,
                 decoration: decoration(
@@ -870,9 +831,7 @@ class _AdminRegistrationPageState
                   }
                 },
               ),
-
               const SizedBox(height: 12),
-
               TextFormField(
                 controller: identityNumberController,
                 decoration: decoration(
@@ -884,13 +843,10 @@ class _AdminRegistrationPageState
                       value.trim().isEmpty) {
                     return 'أدخل رقم الهوية';
                   }
-
                   return null;
                 },
               ),
-
               const SizedBox(height: 12),
-
               dateButton(
                 'تاريخ الميلاد',
                 birthDate,
@@ -902,9 +858,7 @@ class _AdminRegistrationPageState
                   );
                 },
               ),
-
               const SizedBox(height: 10),
-
               dateButton(
                 'تاريخ إصدار الهوية',
                 issueDate,
@@ -916,9 +870,7 @@ class _AdminRegistrationPageState
                   );
                 },
               ),
-
               const SizedBox(height: 10),
-
               dateButton(
                 'تاريخ انتهاء الهوية',
                 expiryDate,
@@ -930,9 +882,7 @@ class _AdminRegistrationPageState
                   );
                 },
               ),
-
               const SizedBox(height: 15),
-
               OutlinedButton.icon(
                 onPressed: pickIdentityImage,
                 icon: const Icon(Icons.upload_file),
@@ -942,12 +892,10 @@ class _AdminRegistrationPageState
                       : 'تم إرفاق صورة الهوية ✓',
                 ),
               ),
-
               if (role == 'AGENT' ||
                   role == 'DISTRIBUTOR')
                 Padding(
-                  padding:
-                      const EdgeInsets.only(top: 10),
+                  padding: const EdgeInsets.only(top: 10),
                   child: OutlinedButton.icon(
                     onPressed: pickCommercialImage,
                     icon: const Icon(Icons.business),
@@ -958,9 +906,7 @@ class _AdminRegistrationPageState
                     ),
                   ),
                 ),
-
               const SizedBox(height: 20),
-
               CheckboxListTile(
                 value: termsAccepted,
                 onChanged: (value) {
@@ -974,9 +920,7 @@ class _AdminRegistrationPageState
                 controlAffinity:
                     ListTileControlAffinity.leading,
               ),
-
               const SizedBox(height: 15),
-
               SizedBox(
                 height: 55,
                 child: FilledButton.icon(
@@ -988,7 +932,6 @@ class _AdminRegistrationPageState
                   ),
                 ),
               ),
-
               const SizedBox(height: 30),
             ],
           ),
@@ -1078,58 +1021,49 @@ class _OwnerDashboardState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 20),
-
             dashboardCard(
               'طلبات التسجيل',
               '${AdminStore.requests.length} طلب',
               Icons.person_add,
               openRequests,
             ),
-
             dashboardCard(
               'المستخدمون الإداريون',
               '${AdminStore.admins.length} حساب',
               Icons.groups,
               openAdmins,
             ),
-
             dashboardCard(
               'العملاء',
               'إدارة العملاء',
               Icons.people,
               () {},
             ),
-
             dashboardCard(
               'الأرصدة',
               'إدارة الأرصدة',
               Icons.account_balance_wallet,
               () {},
             ),
-
             dashboardCard(
               'التحويلات',
               'إدارة التحويلات',
               Icons.swap_horiz,
               () {},
             ),
-
             dashboardCard(
               'الخدمات والأسعار',
               'إدارة الخدمات والعمولات',
               Icons.miscellaneous_services,
               () {},
             ),
-
             dashboardCard(
               'التقارير',
               'التقارير المالية والتشغيلية',
               Icons.bar_chart,
               () {},
             ),
-
             dashboardCard(
               'الإعدادات',
               'إعدادات النظام',
@@ -1260,8 +1194,7 @@ class _RegistrationRequestsPageState
 
                   return Card(
                     child: Padding(
-                      padding:
-                          const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment:
                             CrossAxisAlignment.start,
@@ -1270,91 +1203,57 @@ class _RegistrationRequestsPageState
                             request.fullName,
                             style: const TextStyle(
                               fontSize: 19,
-                              fontWeight:
-                                  FontWeight.bold,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-
                           const SizedBox(height: 8),
-
                           Text(
                             'الهاتف: ${request.phone}',
                           ),
-
                           Text(
                             'الدولة: ${request.country}',
                           ),
-
                           Text(
                             'نوع الحساب: ${request.accountType}',
                           ),
-
                           Text(
                             'الدور المطلوب: ${request.requestedRole}',
                           ),
-
                           Text(
                             'الهوية: ${request.identityType}',
                           ),
-
                           Text(
                             'رقم الهوية: ${request.identityNumber}',
                           ),
-
                           const SizedBox(height: 8),
-
                           Text(
                             'الحالة: ${request.status}',
                             style: TextStyle(
-                              color:
-                                  request.status ==
-                                          'مقبول'
-                                      ? Colors.green
-                                      : request.status ==
-                                              'مرفوض'
-                                          ? Colors.red
-                                          : Colors
-                                              .orange,
-                              fontWeight:
-                                  FontWeight.bold,
+                              color: request.status == 'مقبول'
+                                  ? Colors.green
+                                  : request.status == 'مرفوض'
+                                      ? Colors.red
+                                      : Colors.orange,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-
                           const SizedBox(height: 10),
-
-                          if (request.status ==
-                              'قيد المراجعة')
+                          if (request.status == 'قيد المراجعة')
                             Row(
                               children: [
                                 Expanded(
-                                  child:
-                                      FilledButton(
+                                  child: FilledButton(
                                     onPressed: () =>
-                                        approve(
-                                      request,
-                                    ),
-                                    child:
-                                        const Text(
-                                      'قبول',
-                                    ),
+                                        approve(request),
+                                    child: const Text('قبول'),
                                   ),
                                 ),
-
-                                const SizedBox(
-                                  width: 10,
-                                ),
-
+                                const SizedBox(width: 10),
                                 Expanded(
-                                  child:
-                                      OutlinedButton(
+                                  child: OutlinedButton(
                                     onPressed: () =>
-                                        reject(
-                                      request,
-                                    ),
-                                    child:
-                                        const Text(
-                                      'رفض',
-                                    ),
+                                        reject(request),
+                                    child: const Text('رفض'),
                                   ),
                                 ),
                               ],
@@ -1415,8 +1314,7 @@ class _AdminManagementPageState
           padding: const EdgeInsets.all(12),
           itemCount: AdminStore.admins.length,
           itemBuilder: (_, index) {
-            final admin =
-                AdminStore.admins[index];
+            final admin = AdminStore.admins[index];
 
             return Card(
               child: ListTile(
@@ -1442,9 +1340,7 @@ class _AdminManagementPageState
                           Icons.security,
                         ),
                         onPressed: () =>
-                            editPermissions(
-                          admin,
-                        ),
+                            editPermissions(admin),
                       ),
               ),
             );
@@ -1525,33 +1421,27 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'مشاهدة العملاء',
               p.customersView,
               (v) => p.customersView = v,
             ),
-
             permission(
               'إضافة عميل',
               p.customersAdd,
               (v) => p.customersAdd = v,
             ),
-
             permission(
               'تعديل العملاء',
               p.customersEdit,
               (v) => p.customersEdit = v,
             ),
-
             permission(
               'تعليق العملاء',
               p.customersSuspend,
               (v) => p.customersSuspend = v,
             ),
-
             const Divider(),
-
             const Text(
               'الأرصدة',
               style: TextStyle(
@@ -1559,21 +1449,17 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'مشاهدة الأرصدة',
               p.balancesView,
               (v) => p.balancesView = v,
             ),
-
             permission(
               'تعديل الأرصدة',
               p.balancesEdit,
               (v) => p.balancesEdit = v,
             ),
-
             const Divider(),
-
             const Text(
               'التحويلات',
               style: TextStyle(
@@ -1581,21 +1467,17 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'مشاهدة التحويلات',
               p.transactionsView,
               (v) => p.transactionsView = v,
             ),
-
             permission(
               'تنفيذ التحويلات',
               p.transactionsExecute,
               (v) => p.transactionsExecute = v,
             ),
-
             const Divider(),
-
             const Text(
               'الخدمات',
               style: TextStyle(
@@ -1603,33 +1485,27 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'مشاهدة الخدمات',
               p.servicesView,
               (v) => p.servicesView = v,
             ),
-
             permission(
               'إدارة الخدمات',
               p.servicesManage,
               (v) => p.servicesManage = v,
             ),
-
             permission(
               'تعديل الأسعار',
               p.pricesEdit,
               (v) => p.pricesEdit = v,
             ),
-
             permission(
               'تعديل العمولات',
               p.commissionsEdit,
               (v) => p.commissionsEdit = v,
             ),
-
             const Divider(),
-
             const Text(
               'الوكلاء والموزعون',
               style: TextStyle(
@@ -1637,21 +1513,17 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'إدارة الوكلاء',
               p.agentsManage,
               (v) => p.agentsManage = v,
             ),
-
             permission(
               'إدارة الموزعين',
               p.distributorsManage,
               (v) => p.distributorsManage = v,
             ),
-
             const Divider(),
-
             const Text(
               'الإدارة',
               style: TextStyle(
@@ -1659,34 +1531,27 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'طلبات التسجيل',
               p.registrationRequests,
-              (v) =>
-                  p.registrationRequests = v,
+              (v) => p.registrationRequests = v,
             ),
-
             permission(
               'مشاهدة الموظفين',
               p.employeesView,
               (v) => p.employeesView = v,
             ),
-
             permission(
               'إدارة الموظفين',
               p.employeesManage,
               (v) => p.employeesManage = v,
             ),
-
             permission(
               'إدارة الصلاحيات',
               p.permissionsManage,
               (v) => p.permissionsManage = v,
             ),
-
             const Divider(),
-
             const Text(
               'مزودو الخدمات و API',
               style: TextStyle(
@@ -1694,21 +1559,17 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'إدارة مزودي الخدمات',
               p.providersManage,
               (v) => p.providersManage = v,
             ),
-
             permission(
               'إعدادات API',
               p.apiSettings,
               (v) => p.apiSettings = v,
             ),
-
             const Divider(),
-
             const Text(
               'التقارير',
               style: TextStyle(
@@ -1716,27 +1577,22 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'مشاهدة التقارير',
               p.reportsView,
               (v) => p.reportsView = v,
             ),
-
             permission(
               'التقارير المالية',
               p.financialReports,
               (v) => p.financialReports = v,
             ),
-
             permission(
               'سجل العمليات',
               p.auditLog,
               (v) => p.auditLog = v,
             ),
-
             const Divider(),
-
             const Text(
               'النظام',
               style: TextStyle(
@@ -1744,20 +1600,15 @@ class _PermissionsPageState
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             permission(
               'إعدادات النظام',
               p.systemSettings,
               (v) => p.systemSettings = v,
             ),
-
             const SizedBox(height: 20),
-
             FilledButton.icon(
               onPressed: save,
-              icon: const Icon(
-                Icons.save,
-              ),
+              icon: const Icon(Icons.save),
               label: const Text(
                 'حفظ الصلاحيات',
               ),
@@ -1820,81 +1671,68 @@ class AdminDashboard
                 fontWeight: FontWeight.bold,
               ),
             ),
-
             const SizedBox(height: 20),
-
             if (p.customersView)
               menu(
                 context,
                 'العملاء',
                 Icons.people,
               ),
-
             if (p.balancesView)
               menu(
                 context,
                 'الأرصدة',
                 Icons.account_balance_wallet,
               ),
-
             if (p.transactionsView)
               menu(
                 context,
                 'التحويلات',
                 Icons.swap_horiz,
               ),
-
             if (p.servicesView)
               menu(
                 context,
                 'الخدمات',
                 Icons.miscellaneous_services,
               ),
-
             if (p.agentsManage)
               menu(
                 context,
                 'الوكلاء',
                 Icons.support_agent,
               ),
-
             if (p.distributorsManage)
               menu(
                 context,
                 'الموزعون',
                 Icons.inventory,
               ),
-
             if (p.reportsView)
               menu(
                 context,
                 'التقارير',
                 Icons.bar_chart,
               ),
-
             if (p.financialReports)
               menu(
                 context,
                 'التقارير المالية',
                 Icons.attach_money,
               ),
-
             if (p.auditLog)
               menu(
                 context,
                 'سجل العمليات',
                 Icons.history,
               ),
-
             if (p.permissionsManage)
               menu(
                 context,
                 'إدارة الصلاحيات',
                 Icons.security,
               ),
-
             const SizedBox(height: 30),
-
             const Text(
               'الصلاحيات غير الممنوحة لا تظهر هنا.',
               textAlign: TextAlign.center,
@@ -1924,8 +1762,7 @@ class AdminDashboard
           Icons.arrow_back_ios,
         ),
         onTap: () {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
                 'قسم $title سيتم ربطه بالـBackend لاحقًا.',
