@@ -31,7 +31,7 @@ const Color backgroundColor = Color(0xFFF4F7F6);
 const Color white = Colors.white;
 
 // ============================================================
-// خطأ إعداد Supabase
+// خطأ الإعداد - يظهر فقط إذا كانت إعدادات البناء ناقصة
 // ============================================================
 
 class ConfigurationErrorApp extends StatelessWidget {
@@ -41,6 +41,7 @@ class ConfigurationErrorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      title: 'مدى باي',
       home: Directionality(
         textDirection: TextDirection.rtl,
         child: Scaffold(
@@ -61,7 +62,8 @@ class ConfigurationErrorApp extends StatelessWidget {
                       ),
                       SizedBox(height: 20),
                       Text(
-                        'إعدادات النظام غير مكتملة',
+                        'إعداد النظام غير مكتمل',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 21,
                           fontWeight: FontWeight.bold,
@@ -69,7 +71,7 @@ class ConfigurationErrorApp extends StatelessWidget {
                       ),
                       SizedBox(height: 10),
                       Text(
-                        'تأكد من إعداد SUPABASE_URL و SUPABASE_KEY في GitHub Secrets.',
+                        'تعذر تشغيل التطبيق. يرجى إعادة تثبيت النسخة الصحيحة.',
                         textAlign: TextAlign.center,
                         style: TextStyle(fontSize: 15),
                       ),
@@ -132,7 +134,7 @@ class MadaPayAdmin extends StatelessWidget {
 }
 
 // ============================================================
-// زر ثلاثي الأبعاد خفيف
+// زر احترافي ثلاثي الأبعاد خفيف
 // ============================================================
 
 class PremiumButton extends StatefulWidget {
@@ -164,7 +166,9 @@ class _PremiumButtonState extends State<PremiumButton> {
 
     return GestureDetector(
       onTapDown: enabled
-          ? (_) => setState(() => pressed = true)
+          ? (_) {
+              setState(() => pressed = true);
+            }
           : null,
       onTapUp: enabled
           ? (_) {
@@ -173,7 +177,9 @@ class _PremiumButtonState extends State<PremiumButton> {
             }
           : null,
       onTapCancel: enabled
-          ? () => setState(() => pressed = false)
+          ? () {
+              setState(() => pressed = false);
+            }
           : null,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 100),
@@ -231,17 +237,15 @@ class _PremiumButtonState extends State<PremiumButton> {
               else
                 Icon(
                   widget.icon,
-                  color: widget.outlined
-                      ? luxuryGreen
-                      : white,
+                  color: widget.outlined ? luxuryGreen : white,
                 ),
               const SizedBox(width: 10),
               Text(
-                widget.loading ? 'جارٍ التنفيذ...' : widget.text,
+                widget.loading
+                    ? 'جارٍ التنفيذ...'
+                    : widget.text,
                 style: TextStyle(
-                  color: widget.outlined
-                      ? luxuryGreen
-                      : white,
+                  color: widget.outlined ? luxuryGreen : white,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
@@ -405,9 +409,7 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       );
     } on AuthException catch (e) {
       showMessage(
-        e.message.isNotEmpty
-            ? e.message
-            : 'فشل تسجيل الدخول',
+        e.message.isNotEmpty ? e.message : 'فشل تسجيل الدخول',
       );
     } catch (e) {
       showMessage('حدث خطأ أثناء الاتصال بالنظام');
@@ -462,7 +464,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                   ),
                   child: Column(
                     children: [
-                      // الشعار
                       Container(
                         width: 92,
                         height: 92,
@@ -508,7 +509,6 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
                       const SizedBox(height: 36),
 
-                      // بطاقة الدخول
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
@@ -601,27 +601,14 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
                             const SizedBox(height: 18),
 
-                            Row(
-                              mainAxisAlignment:
-                                  MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.security_rounded,
-                                  size: 17,
-                                  color: Colors.grey.shade600,
-                                ),
-                                const Text(
-  'تطوير م / راضي الشبيبي',
-  textAlign: TextAlign.center,
-  style: TextStyle(
-    color: Color(0xFF777777),
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-  ),
-),
-                                  ),
-                                ),
-                              ],
+                            const Text(
+                              'تطوير م / أبو معاوية الشبيبي',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Color(0xFF777777),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
@@ -744,22 +731,27 @@ class _AdminHomeState extends State<AdminHome> {
       const SimpleSectionPage(
         title: 'المستخدمون',
         icon: Icons.people_alt_rounded,
+        description: 'إدارة العملاء والحسابات والمستخدمين.',
       ),
       const SimpleSectionPage(
         title: 'الأرصدة',
         icon: Icons.account_balance_wallet_rounded,
+        description: 'متابعة الأرصدة والحسابات المالية.',
       ),
       const SimpleSectionPage(
         title: 'التحويلات',
         icon: Icons.swap_horiz_rounded,
+        description: 'متابعة التحويلات والعمليات المالية.',
       ),
       const SimpleSectionPage(
         title: 'الخدمات والأسعار',
         icon: Icons.apps_rounded,
+        description: 'إدارة الخدمات والأسعار ومتابعة حالتها.',
       ),
       const SimpleSectionPage(
         title: 'التقارير',
         icon: Icons.bar_chart_rounded,
+        description: 'عرض التقارير والإحصائيات المالية والتشغيلية.',
       ),
     ];
 
@@ -798,30 +790,15 @@ class _AdminHomeState extends State<AdminHome> {
 
   Widget _buildDrawer() {
     final items = [
-      (
-        'الرئيسية',
-        Icons.dashboard_rounded,
-      ),
-      (
-        'المستخدمون',
-        Icons.people_alt_rounded,
-      ),
+      ('الرئيسية', Icons.dashboard_rounded),
+      ('المستخدمون', Icons.people_alt_rounded),
       (
         'الأرصدة',
         Icons.account_balance_wallet_rounded,
       ),
-      (
-        'التحويلات',
-        Icons.swap_horiz_rounded,
-      ),
-      (
-        'الخدمات والأسعار',
-        Icons.apps_rounded,
-      ),
-      (
-        'التقارير',
-        Icons.bar_chart_rounded,
-      ),
+      ('التحويلات', Icons.swap_horiz_rounded),
+      ('الخدمات والأسعار', Icons.apps_rounded),
+      ('التقارير', Icons.bar_chart_rounded),
     ];
 
     return Drawer(
@@ -1168,7 +1145,8 @@ class DashboardOverview extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'تم تسجيل الدخول بنجاحTextStyle(
+                        'تم تسجيل الدخول بنجاح',
+                        style: TextStyle(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
@@ -1217,8 +1195,7 @@ class StatCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(9),
@@ -1369,20 +1346,25 @@ class QuickAction extends StatelessWidget {
 class SimpleSectionPage extends StatelessWidget {
   final String title;
   final IconData icon;
+  final String description;
 
   const SimpleSectionPage({
     super.key,
     required this.title,
     required this.icon,
+    required this.description,
   });
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Container(
           width: double.infinity,
+          constraints: const BoxConstraints(
+            maxWidth: 600,
+          ),
           padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(
             color: Colors.white,
@@ -1413,19 +1395,49 @@ class SimpleSectionPage extends StatelessWidget {
               const SizedBox(height: 18),
               Text(
                 title,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 23,
                   fontWeight: FontWeight.w900,
                   color: deepGreen,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               Text(
-                'سيتم ربط هذا القسم ببيانات Supabase في الخطوة التالية.',
+                description,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.grey.shade600,
                   fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: gold.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.construction_rounded,
+                      color: gold,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Text(
+                      'القسم قيد التجهيز',
+                      style: TextStyle(
+                        color: deepGreen,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
