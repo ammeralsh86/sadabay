@@ -32,6 +32,14 @@ class MadaPayAdmin extends StatelessWidget {
 }
 
 // ============================================================
+// اتجاه اللغة العربية
+// نستخدم byName لتجنب مشكلة TextDirection.rtl في بيئة البناء
+// ============================================================
+
+const TextDirection arabicDirection =
+    TextDirection.values.byName('rtl');
+
+// ============================================================
 // الصلاحيات
 // ============================================================
 
@@ -203,10 +211,20 @@ class AdminLoginPage extends StatefulWidget {
 }
 
 class _AdminLoginPageState extends State<AdminLoginPage> {
-  final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
+  final TextEditingController phoneController =
+      TextEditingController();
+
+  final TextEditingController passwordController =
+      TextEditingController();
 
   bool obscurePassword = true;
+
+  @override
+  void dispose() {
+    phoneController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
 
   void login() {
     final phone = phoneController.text.trim();
@@ -229,15 +247,22 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       return;
     }
 
-    final admin = AdminStore.admins.where(
-      (item) => item.phone == phone && item.active,
-    );
+    AdminUser? admin;
 
-    if (admin.isNotEmpty) {
+    for (final item in AdminStore.admins) {
+      if (item.phone == phone && item.active) {
+        admin = item;
+        break;
+      }
+    }
+
+    if (admin != null) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => AdminDashboard(user: admin.first),
+          builder: (_) => AdminDashboard(
+            user: admin!,
+          ),
         ),
       );
       return;
@@ -250,14 +275,16 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
   void showMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+      SnackBar(
+        content: Text(message),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         body: SafeArea(
           child: Center(
@@ -339,7 +366,8 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AdminRegistrationPage(),
+                          builder: (_) =>
+                              const AdminRegistrationPage(),
                         ),
                       );
                     },
@@ -436,6 +464,16 @@ class _AdminRegistrationPageState
     'الإقامة',
   ];
 
+  @override
+  void dispose() {
+    phoneController.dispose();
+    passwordController.dispose();
+    confirmPasswordController.dispose();
+    nameController.dispose();
+    identityNumberController.dispose();
+    super.dispose();
+  }
+
   Future<void> selectDate(
     void Function(DateTime) callback,
   ) async {
@@ -445,6 +483,8 @@ class _AdminRegistrationPageState
       lastDate: DateTime(2100),
       initialDate: DateTime.now(),
     );
+
+    if (!mounted) return;
 
     if (selected != null) {
       callback(selected);
@@ -458,6 +498,8 @@ class _AdminRegistrationPageState
       source: ImageSource.gallery,
       imageQuality: 80,
     );
+
+    if (!mounted) return;
 
     if (image != null) {
       setState(() {
@@ -473,6 +515,8 @@ class _AdminRegistrationPageState
       source: ImageSource.gallery,
       imageQuality: 80,
     );
+
+    if (!mounted) return;
 
     if (image != null) {
       setState(() {
@@ -509,10 +553,41 @@ class _AdminRegistrationPageState
       return;
     }
 
+    if (expiryDate!.isBefore(issueDate!)) {
+      message(
+        'تاريخ انتهاء الهوية يجب أن يكون بعد تاريخ الإصدار',
+      );
+      return;
+    }
+
+    final phone = phoneController.text.trim();
+
+    final existing = AdminStore.admins.any(
+      (admin) => admin.phone == phone,
+    );
+
+    if (existing) {
+      message('رقم الهاتف مرتبط بحساب إداري بالفعل');
+      return;
+    }
+
+    final pendingRequest = AdminStore.requests.any(
+      (request) =>
+          request.phone == phone &&
+          request.status == 'قيد المراجعة',
+    );
+
+    if (pendingRequest) {
+      message(
+        'يوجد طلب تسجيل قيد المراجعة لهذا الرقم',
+      );
+      return;
+    }
+
     AdminStore.requests.add(
       AdminRequest(
         fullName: nameController.text.trim(),
-        phone: phoneController.text.trim(),
+        phone: phone,
         country: country,
         accountType: accountType,
         requestedRole: role,
@@ -547,7 +622,9 @@ class _AdminRegistrationPageState
 
   void message(String text) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(text)),
+      SnackBar(
+        content: Text(text),
+      ),
     );
   }
 
@@ -563,14 +640,19 @@ class _AdminRegistrationPageState
   }
 
   String dateText(DateTime? date) {
-    if (date == null) return 'اختر التاريخ';
-    return DateFormat('yyyy/MM/dd').format(date);
+    if (date == null) {
+      return 'اختر التاريخ';
+    }
+
+    return DateFormat(
+      'yyyy/MM/dd',
+    ).format(date);
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
           title: const Text('إنشاء حساب إداري'),
@@ -597,9 +679,11 @@ class _AdminRegistrationPageState
                   Icons.person,
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'أدخل الاسم الكامل';
                   }
+
                   return null;
                 },
               ),
@@ -614,9 +698,11 @@ class _AdminRegistrationPageState
                   Icons.phone,
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'أدخل رقم الهاتف';
                   }
+
                   return null;
                 },
               ),
@@ -631,7 +717,7 @@ class _AdminRegistrationPageState
                 ),
                 items: countries
                     .map(
-                      (item) => DropdownMenuItem(
+                      (item) => DropdownMenuItem<String>(
                         value: item,
                         child: Text(item),
                       ),
@@ -656,9 +742,11 @@ class _AdminRegistrationPageState
                   Icons.lock,
                 ),
                 validator: (value) {
-                  if (value == null || value.length < 6) {
+                  if (value == null ||
+                      value.length < 6) {
                     return 'كلمة المرور يجب ألا تقل عن 6 أحرف';
                   }
+
                   return null;
                 },
               ),
@@ -673,9 +761,11 @@ class _AdminRegistrationPageState
                   Icons.lock_outline,
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null ||
+                      value.isEmpty) {
                     return 'أكد كلمة المرور';
                   }
+
                   return null;
                 },
               ),
@@ -700,7 +790,7 @@ class _AdminRegistrationPageState
                 ),
                 items: roles
                     .map(
-                      (item) => DropdownMenuItem(
+                      (item) => DropdownMenuItem<String>(
                         value: item,
                         child: Text(item),
                       ),
@@ -731,7 +821,7 @@ class _AdminRegistrationPageState
                   'إدارة',
                 ]
                     .map(
-                      (item) => DropdownMenuItem(
+                      (item) => DropdownMenuItem<String>(
                         value: item,
                         child: Text(item),
                       ),
@@ -766,7 +856,7 @@ class _AdminRegistrationPageState
                 ),
                 items: identityTypes
                     .map(
-                      (item) => DropdownMenuItem(
+                      (item) => DropdownMenuItem<String>(
                         value: item,
                         child: Text(item),
                       ),
@@ -790,9 +880,11 @@ class _AdminRegistrationPageState
                   Icons.numbers,
                 ),
                 validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
+                  if (value == null ||
+                      value.trim().isEmpty) {
                     return 'أدخل رقم الهوية';
                   }
+
                   return null;
                 },
               ),
@@ -854,7 +946,8 @@ class _AdminRegistrationPageState
               if (role == 'AGENT' ||
                   role == 'DISTRIBUTOR')
                 Padding(
-                  padding: const EdgeInsets.only(top: 10),
+                  padding:
+                      const EdgeInsets.only(top: 10),
                   child: OutlinedButton.icon(
                     onPressed: pickCommercialImage,
                     icon: const Icon(Icons.business),
@@ -935,18 +1028,23 @@ class OwnerDashboard extends StatefulWidget {
   });
 
   @override
-  State<OwnerDashboard> createState() => _OwnerDashboardState();
+  State<OwnerDashboard> createState() =>
+      _OwnerDashboardState();
 }
 
-class _OwnerDashboardState extends State<OwnerDashboard> {
+class _OwnerDashboardState
+    extends State<OwnerDashboard> {
   void openRequests() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const RegistrationRequestsPage(),
+        builder: (_) =>
+            const RegistrationRequestsPage(),
       ),
     ).then((_) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
@@ -954,7 +1052,8 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const AdminManagementPage(),
+        builder: (_) =>
+            const AdminManagementPage(),
       ),
     );
   }
@@ -962,10 +1061,12 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('لوحة المالك الرئيسي'),
+          title: const Text(
+            'لوحة المالك الرئيسي',
+          ),
         ),
         body: ListView(
           padding: const EdgeInsets.all(18),
@@ -1061,7 +1162,9 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
           ),
         ),
         subtitle: Text(subtitle),
-        trailing: const Icon(Icons.arrow_back_ios),
+        trailing: const Icon(
+          Icons.arrow_back_ios,
+        ),
         onTap: onTap,
       ),
     );
@@ -1072,8 +1175,11 @@ class _OwnerDashboardState extends State<OwnerDashboard> {
 // طلبات التسجيل
 // ============================================================
 
-class RegistrationRequestsPage extends StatefulWidget {
-  const RegistrationRequestsPage({super.key});
+class RegistrationRequestsPage
+    extends StatefulWidget {
+  const RegistrationRequestsPage({
+    super.key,
+  });
 
   @override
   State<RegistrationRequestsPage> createState() =>
@@ -1083,17 +1189,27 @@ class RegistrationRequestsPage extends StatefulWidget {
 class _RegistrationRequestsPageState
     extends State<RegistrationRequestsPage> {
   void approve(AdminRequest request) {
+    if (request.status != 'قيد المراجعة') {
+      return;
+    }
+
+    final alreadyExists = AdminStore.admins.any(
+      (admin) => admin.phone == request.phone,
+    );
+
     setState(() {
       request.status = 'مقبول';
 
-      AdminStore.admins.add(
-        AdminUser(
-          name: request.fullName,
-          phone: request.phone,
-          role: request.requestedRole,
-          permissions: Permissions(),
-        ),
-      );
+      if (!alreadyExists) {
+        AdminStore.admins.add(
+          AdminUser(
+            name: request.fullName,
+            phone: request.phone,
+            role: request.requestedRole,
+            permissions: Permissions(),
+          ),
+        );
+      }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1106,6 +1222,10 @@ class _RegistrationRequestsPageState
   }
 
   void reject(AdminRequest request) {
+    if (request.status != 'قيد المراجعة') {
+      return;
+    }
+
     setState(() {
       request.status = 'مرفوض';
     });
@@ -1114,28 +1234,34 @@ class _RegistrationRequestsPageState
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('طلبات التسجيل'),
+          title: const Text(
+            'طلبات التسجيل',
+          ),
         ),
         body: AdminStore.requests.isEmpty
             ? const Center(
                 child: Text(
                   'لا توجد طلبات تسجيل حاليًا',
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(
+                    fontSize: 18,
+                  ),
                 ),
               )
             : ListView.builder(
                 padding: const EdgeInsets.all(12),
-                itemCount: AdminStore.requests.length,
+                itemCount:
+                    AdminStore.requests.length,
                 itemBuilder: (_, index) {
                   final request =
                       AdminStore.requests[index];
 
                   return Card(
                     child: Padding(
-                      padding: const EdgeInsets.all(12),
+                      padding:
+                          const EdgeInsets.all(12),
                       child: Column(
                         crossAxisAlignment:
                             CrossAxisAlignment.start,
@@ -1144,33 +1270,56 @@ class _RegistrationRequestsPageState
                             request.fullName,
                             style: const TextStyle(
                               fontSize: 19,
-                              fontWeight: FontWeight.bold,
+                              fontWeight:
+                                  FontWeight.bold,
                             ),
                           ),
+
                           const SizedBox(height: 8),
-                          Text('الهاتف: ${request.phone}'),
-                          Text('الدولة: ${request.country}'),
+
+                          Text(
+                            'الهاتف: ${request.phone}',
+                          ),
+
+                          Text(
+                            'الدولة: ${request.country}',
+                          ),
+
+                          Text(
+                            'نوع الحساب: ${request.accountType}',
+                          ),
+
                           Text(
                             'الدور المطلوب: ${request.requestedRole}',
                           ),
+
                           Text(
                             'الهوية: ${request.identityType}',
                           ),
+
                           Text(
                             'رقم الهوية: ${request.identityNumber}',
                           ),
+
                           const SizedBox(height: 8),
+
                           Text(
                             'الحالة: ${request.status}',
                             style: TextStyle(
-                              color: request.status == 'مقبول'
-                                  ? Colors.green
-                                  : request.status == 'مرفوض'
-                                      ? Colors.red
-                                      : Colors.orange,
-                              fontWeight: FontWeight.bold,
+                              color:
+                                  request.status ==
+                                          'مقبول'
+                                      ? Colors.green
+                                      : request.status ==
+                                              'مرفوض'
+                                          ? Colors.red
+                                          : Colors
+                                              .orange,
+                              fontWeight:
+                                  FontWeight.bold,
                             ),
                           ),
+
                           const SizedBox(height: 10),
 
                           if (request.status ==
@@ -1178,20 +1327,34 @@ class _RegistrationRequestsPageState
                             Row(
                               children: [
                                 Expanded(
-                                  child: FilledButton(
+                                  child:
+                                      FilledButton(
                                     onPressed: () =>
-                                        approve(request),
+                                        approve(
+                                      request,
+                                    ),
                                     child:
-                                        const Text('قبول'),
+                                        const Text(
+                                      'قبول',
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+
+                                const SizedBox(
+                                  width: 10,
+                                ),
+
                                 Expanded(
-                                  child: OutlinedButton(
+                                  child:
+                                      OutlinedButton(
                                     onPressed: () =>
-                                        reject(request),
+                                        reject(
+                                      request,
+                                    ),
                                     child:
-                                        const Text('رفض'),
+                                        const Text(
+                                      'رفض',
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1211,8 +1374,11 @@ class _RegistrationRequestsPageState
 // إدارة الحسابات الإدارية
 // ============================================================
 
-class AdminManagementPage extends StatefulWidget {
-  const AdminManagementPage({super.key});
+class AdminManagementPage
+    extends StatefulWidget {
+  const AdminManagementPage({
+    super.key,
+  });
 
   @override
   State<AdminManagementPage> createState() =>
@@ -1225,37 +1391,46 @@ class _AdminManagementPageState
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PermissionsPage(admin: admin),
+        builder: (_) =>
+            PermissionsPage(admin: admin),
       ),
     ).then((_) {
-      setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('الحسابات الإدارية'),
+          title: const Text(
+            'الحسابات الإدارية',
+          ),
         ),
         body: ListView.builder(
           padding: const EdgeInsets.all(12),
           itemCount: AdminStore.admins.length,
           itemBuilder: (_, index) {
-            final admin = AdminStore.admins[index];
+            final admin =
+                AdminStore.admins[index];
 
             return Card(
               child: ListTile(
                 leading: CircleAvatar(
                   child: Text(
-                    admin.role.substring(0, 1),
+                    admin.role.isNotEmpty
+                        ? admin.role.substring(0, 1)
+                        : '?',
                   ),
                 ),
                 title: Text(admin.name),
                 subtitle: Text(
-                  '${admin.role} • ${admin.active ? 'نشط' : 'موقوف'}',
+                  '${admin.role} • '
+                  '${admin.active ? 'نشط' : 'موقوف'}',
                 ),
                 trailing: admin.role == 'OWNER'
                     ? const Icon(
@@ -1263,9 +1438,13 @@ class _AdminManagementPageState
                         color: Colors.red,
                       )
                     : IconButton(
-                        icon: const Icon(Icons.security),
+                        icon: const Icon(
+                          Icons.security,
+                        ),
                         onPressed: () =>
-                            editPermissions(admin),
+                            editPermissions(
+                          admin,
+                        ),
                       ),
               ),
             );
@@ -1280,7 +1459,8 @@ class _AdminManagementPageState
 // شاشة الصلاحيات
 // ============================================================
 
-class PermissionsPage extends StatefulWidget {
+class PermissionsPage
+    extends StatefulWidget {
   final AdminUser admin;
 
   const PermissionsPage({
@@ -1293,7 +1473,8 @@ class PermissionsPage extends StatefulWidget {
       _PermissionsPageState();
 }
 
-class _PermissionsPageState extends State<PermissionsPage> {
+class _PermissionsPageState
+    extends State<PermissionsPage> {
   late Permissions p;
 
   @override
@@ -1307,7 +1488,9 @@ class _PermissionsPageState extends State<PermissionsPage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('تم حفظ الصلاحيات'),
+        content: Text(
+          'تم حفظ الصلاحيات',
+        ),
       ),
     );
 
@@ -1317,7 +1500,7 @@ class _PermissionsPageState extends State<PermissionsPage> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -1326,7 +1509,9 @@ class _PermissionsPageState extends State<PermissionsPage> {
           actions: [
             IconButton(
               onPressed: save,
-              icon: const Icon(Icons.save),
+              icon: const Icon(
+                Icons.save,
+              ),
             ),
           ],
         ),
@@ -1340,14 +1525,30 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('مشاهدة العملاء', p.customersView,
-                (v) => p.customersView = v),
-            permission('إضافة عميل', p.customersAdd,
-                (v) => p.customersAdd = v),
-            permission('تعديل العملاء', p.customersEdit,
-                (v) => p.customersEdit = v),
-            permission('تعليق العملاء', p.customersSuspend,
-                (v) => p.customersSuspend = v),
+
+            permission(
+              'مشاهدة العملاء',
+              p.customersView,
+              (v) => p.customersView = v,
+            ),
+
+            permission(
+              'إضافة عميل',
+              p.customersAdd,
+              (v) => p.customersAdd = v,
+            ),
+
+            permission(
+              'تعديل العملاء',
+              p.customersEdit,
+              (v) => p.customersEdit = v,
+            ),
+
+            permission(
+              'تعليق العملاء',
+              p.customersSuspend,
+              (v) => p.customersSuspend = v,
+            ),
 
             const Divider(),
 
@@ -1358,10 +1559,18 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('مشاهدة الأرصدة', p.balancesView,
-                (v) => p.balancesView = v),
-            permission('تعديل الأرصدة', p.balancesEdit,
-                (v) => p.balancesEdit = v),
+
+            permission(
+              'مشاهدة الأرصدة',
+              p.balancesView,
+              (v) => p.balancesView = v,
+            ),
+
+            permission(
+              'تعديل الأرصدة',
+              p.balancesEdit,
+              (v) => p.balancesEdit = v,
+            ),
 
             const Divider(),
 
@@ -1372,12 +1581,18 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('مشاهدة التحويلات', p.transactionsView,
-                (v) => p.transactionsView = v),
+
             permission(
-                'تنفيذ التحويلات',
-                p.transactionsExecute,
-                (v) => p.transactionsExecute = v),
+              'مشاهدة التحويلات',
+              p.transactionsView,
+              (v) => p.transactionsView = v,
+            ),
+
+            permission(
+              'تنفيذ التحويلات',
+              p.transactionsExecute,
+              (v) => p.transactionsExecute = v,
+            ),
 
             const Divider(),
 
@@ -1388,14 +1603,30 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('مشاهدة الخدمات', p.servicesView,
-                (v) => p.servicesView = v),
-            permission('إدارة الخدمات', p.servicesManage,
-                (v) => p.servicesManage = v),
-            permission('تعديل الأسعار', p.pricesEdit,
-                (v) => p.pricesEdit = v),
-            permission('تعديل العمولات', p.commissionsEdit,
-                (v) => p.commissionsEdit = v),
+
+            permission(
+              'مشاهدة الخدمات',
+              p.servicesView,
+              (v) => p.servicesView = v,
+            ),
+
+            permission(
+              'إدارة الخدمات',
+              p.servicesManage,
+              (v) => p.servicesManage = v,
+            ),
+
+            permission(
+              'تعديل الأسعار',
+              p.pricesEdit,
+              (v) => p.pricesEdit = v,
+            ),
+
+            permission(
+              'تعديل العمولات',
+              p.commissionsEdit,
+              (v) => p.commissionsEdit = v,
+            ),
 
             const Divider(),
 
@@ -1406,12 +1637,18 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('إدارة الوكلاء', p.agentsManage,
-                (v) => p.agentsManage = v),
+
             permission(
-                'إدارة الموزعين',
-                p.distributorsManage,
-                (v) => p.distributorsManage = v),
+              'إدارة الوكلاء',
+              p.agentsManage,
+              (v) => p.agentsManage = v,
+            ),
+
+            permission(
+              'إدارة الموزعين',
+              p.distributorsManage,
+              (v) => p.distributorsManage = v,
+            ),
 
             const Divider(),
 
@@ -1422,18 +1659,31 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             permission(
-                'طلبات التسجيل',
-                p.registrationRequests,
-                (v) => p.registrationRequests = v),
-            permission('مشاهدة الموظفين', p.employeesView,
-                (v) => p.employeesView = v),
-            permission('إدارة الموظفين', p.employeesManage,
-                (v) => p.employeesManage = v),
+              'طلبات التسجيل',
+              p.registrationRequests,
+              (v) =>
+                  p.registrationRequests = v,
+            ),
+
             permission(
-                'إدارة الصلاحيات',
-                p.permissionsManage,
-                (v) => p.permissionsManage = v),
+              'مشاهدة الموظفين',
+              p.employeesView,
+              (v) => p.employeesView = v,
+            ),
+
+            permission(
+              'إدارة الموظفين',
+              p.employeesManage,
+              (v) => p.employeesManage = v,
+            ),
+
+            permission(
+              'إدارة الصلاحيات',
+              p.permissionsManage,
+              (v) => p.permissionsManage = v,
+            ),
 
             const Divider(),
 
@@ -1444,12 +1694,18 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
+
             permission(
-                'إدارة مزودي الخدمات',
-                p.providersManage,
-                (v) => p.providersManage = v),
-            permission('إعدادات API', p.apiSettings,
-                (v) => p.apiSettings = v),
+              'إدارة مزودي الخدمات',
+              p.providersManage,
+              (v) => p.providersManage = v,
+            ),
+
+            permission(
+              'إعدادات API',
+              p.apiSettings,
+              (v) => p.apiSettings = v,
+            ),
 
             const Divider(),
 
@@ -1460,14 +1716,24 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('مشاهدة التقارير', p.reportsView,
-                (v) => p.reportsView = v),
+
             permission(
-                'التقارير المالية',
-                p.financialReports,
-                (v) => p.financialReports = v),
-            permission('سجل العمليات', p.auditLog,
-                (v) => p.auditLog = v),
+              'مشاهدة التقارير',
+              p.reportsView,
+              (v) => p.reportsView = v,
+            ),
+
+            permission(
+              'التقارير المالية',
+              p.financialReports,
+              (v) => p.financialReports = v,
+            ),
+
+            permission(
+              'سجل العمليات',
+              p.auditLog,
+              (v) => p.auditLog = v,
+            ),
 
             const Divider(),
 
@@ -1478,15 +1744,23 @@ class _PermissionsPageState extends State<PermissionsPage> {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            permission('إعدادات النظام', p.systemSettings,
-                (v) => p.systemSettings = v),
+
+            permission(
+              'إعدادات النظام',
+              p.systemSettings,
+              (v) => p.systemSettings = v,
+            ),
 
             const SizedBox(height: 20),
 
             FilledButton.icon(
               onPressed: save,
-              icon: const Icon(Icons.save),
-              label: const Text('حفظ الصلاحيات'),
+              icon: const Icon(
+                Icons.save,
+              ),
+              label: const Text(
+                'حفظ الصلاحيات',
+              ),
             ),
           ],
         ),
@@ -1515,7 +1789,8 @@ class _PermissionsPageState extends State<PermissionsPage> {
 // لوحة المستخدم الإداري العادي
 // ============================================================
 
-class AdminDashboard extends StatelessWidget {
+class AdminDashboard
+    extends StatelessWidget {
   final AdminUser user;
 
   const AdminDashboard({
@@ -1528,7 +1803,7 @@ class AdminDashboard extends StatelessWidget {
     final p = user.permissions;
 
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: arabicDirection,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -1623,7 +1898,9 @@ class AdminDashboard extends StatelessWidget {
             const Text(
               'الصلاحيات غير الممنوحة لا تظهر هنا.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: Colors.grey,
+              ),
             ),
           ],
         ),
@@ -1643,9 +1920,12 @@ class AdminDashboard extends StatelessWidget {
           color: const Color(0xFF147D64),
         ),
         title: Text(title),
-        trailing: const Icon(Icons.arrow_back_ios),
+        trailing: const Icon(
+          Icons.arrow_back_ios,
+        ),
         onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(context)
+              .showSnackBar(
             SnackBar(
               content: Text(
                 'قسم $title سيتم ربطه بالـBackend لاحقًا.',
