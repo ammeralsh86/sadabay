@@ -610,12 +610,15 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                                   size: 17,
                                   color: Colors.grey.shade600,
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  'اتصال آمن عبر Supabase',
-                                  style: TextStyle(
-                                    color: Colors.grey.shade600,
-                                    fontSize: 12,
+                                const Text(
+  'تطوير م / راضي الشبيبي',
+  textAlign: TextAlign.center,
+  style: TextStyle(
+    color: Color(0xFF777777),
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  ),
+),
                                   ),
                                 ),
                               ],
@@ -1165,8 +1168,7 @@ class DashboardOverview extends StatelessWidget {
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'تم تسجيل الدخول عبر Supabase بنجاح',
-                        style: TextStyle(
+                        'تم تسجيل الدخول بنجاحTextStyle(
                           color: Colors.grey,
                           fontSize: 13,
                         ),
