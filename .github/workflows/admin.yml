@@ -1,0 +1,42 @@
+name: Build Admin App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "admin_app/**"
+
+  workflow_dispatch:
+
+jobs:
+  build-admin:
+    name: Build Admin APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Prepare Admin App
+        working-directory: admin_app
+        run: flutter create --platforms=android --project-name=mada_pay_admin .
+
+      - name: Get Admin Dependencies
+        working-directory: admin_app
+        run: flutter pub get
+
+      - name: Build Admin APK
+        working-directory: admin_app
+        run: flutter build apk --release
+
+      - name: Upload Admin APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: mada-pay-admin-apk
+          path: admin_app/build/app/outputs/flutter-apk/app-release.apk
