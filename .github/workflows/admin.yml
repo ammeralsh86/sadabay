@@ -6,39 +6,78 @@ on:
       - main
     paths:
       - "admin_app/**"
+      - ".github/workflows/admin.yml"
+
   workflow_dispatch:
 
 jobs:
   build-admin:
-    name: Build Admin APK
+    name: Build Mada Pay Admin APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
+          cache: true
 
       - name: Prepare Admin App
         working-directory: admin_app
-        run: flutter create --platforms=android --project-name=mada_pay_admin .
+        run: |
+          flutter create \
+            --platforms=android \
+            --project-name=mada_pay_admin \
+            .
 
-      - name: Get Admin Dependencies
+      - name: Get Flutter Dependencies
         working-directory: admin_app
         run: flutter pub get
+
+      - name: Verify Supabase Configuration
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "ERROR: SUPABASE_URL secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$SUPABASE_KEY" ]; then
+            echo "ERROR: SUPABASE_KEY secret is missing."
+            exit 1
+          fi
+
+          echo "SUPABASE_URL is configured."
+          echo "SUPABASE_KEY is configured."
 
       - name: Build Admin APK
         working-directory: admin_app
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: flutter build apk --release --dart-define=SUPABASE_URL=$SUPABASE_URL --dart-define=SUPABASE_KEY=$SUPABASE_KEY
+        run: |
+          flutter build apk --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_KEY="$SUPABASE_KEY"
+
+      - name: Verify APK
+        working-directory: admin_app
+        run: |
+          if [ ! -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+            echo "ERROR: APK was not created."
+            exit 1
+          fi
+
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
 
       - name: Upload Admin APK
         uses: actions/upload-artifact@v4
         with:
           name: mada-pay-admin-apk
           path: admin_app/build/app/outputs/flutter-apk/app-release.apk
+          if-no-files-found: error
