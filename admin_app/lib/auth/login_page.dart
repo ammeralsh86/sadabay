@@ -294,7 +294,9 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                         },
                       ),
 
-                      const                       SizedBox(
+                      const SizedBox(height: 24),
+
+                      SizedBox(
                         height: 52,
                         child: ElevatedButton(
                           onPressed: _loading ? null : _login,
