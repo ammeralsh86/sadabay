@@ -294,13 +294,36 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
                         },
                       ),
 
-                      const SizedBox(height: 24),
-
-                      SizedBox(
+                      const                       SizedBox(
                         height: 52,
                         child: ElevatedButton(
                           onPressed: _loading ? null : _login,
                           child: _loading
                               ? const SizedBox(
                                   width: 24,
-                                  height:
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'تسجيل الدخول',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
