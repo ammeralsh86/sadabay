@@ -263,7 +263,7 @@ class DashboardPage extends StatelessWidget {
                 ],
               ),
             ),
-            ListTile(
+                        ListTile(
               leading: const Icon(Icons.dashboard_outlined),
               title: const Text('الرئيسية'),
               onTap: () {
@@ -271,4 +271,15 @@ class DashboardPage extends StatelessWidget {
               },
             ),
             ListTile(
-              leading: const
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('الإعدادات'),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
