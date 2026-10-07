@@ -1,4 +1,4 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:Supabase_flutter/Supabase_flutter.dart';
 
 class SupabaseConfig {
   SupabaseConfig._();
@@ -18,4 +18,4 @@ class SupabaseConfig {
   static Future<void> signOut() async {
     await client.auth.signOut();
   }
-}
+  } 
