@@ -12,9 +12,9 @@ Future<void> main() async {
     return;
   }
 
-  echo "SUPABASE_URL is configured."
-echo "SUPABASE_URL = ${SUPABASE_URL}"
-echo "SUPABASE_KEY is configured."
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseKey,
   );
 
   runApp(const MadaPayAdmin());
