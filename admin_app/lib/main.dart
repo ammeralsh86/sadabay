@@ -24,11 +24,6 @@ Future<void> main() async {
   runApp(const MadaPayAdmin());
 }
 
-
-// =========================================================
-// التطبيق الرئيسي
-// =========================================================
-
 class MadaPayAdmin extends StatelessWidget {
   const MadaPayAdmin({super.key});
 
@@ -37,24 +32,18 @@ class MadaPayAdmin extends StatelessWidget {
     return MaterialApp(
       title: 'مدى باي',
       debugShowCheckedModeBanner: false,
-
       theme: AppTheme.lightTheme,
-
       locale: const Locale('ar'),
       supportedLocales: const [
         Locale('ar'),
         Locale('en'),
       ],
-
       initialRoute: '/login',
-
       routes: {
         '/login': (context) => const AdminLoginPage(),
-
         '/dashboard': (context) => const DashboardPage(
               isOwner: false,
             ),
-
         '/owner-dashboard': (context) => const DashboardPage(
               isOwner: true,
             ),
@@ -62,11 +51,6 @@ class MadaPayAdmin extends StatelessWidget {
     );
   }
 }
-
-
-// =========================================================
-// شاشة خطأ الإعداد
-// =========================================================
 
 class ConfigurationErrorApp extends StatelessWidget {
   const ConfigurationErrorApp({super.key});
@@ -90,9 +74,7 @@ class ConfigurationErrorApp extends StatelessWidget {
                     size: 64,
                     color: Colors.red,
                   ),
-
                   SizedBox(height: 20),
-
                   Text(
                     'تعذر تشغيل التطبيق',
                     textAlign: TextAlign.center,
@@ -101,9 +83,7 @@ class ConfigurationErrorApp extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   SizedBox(height: 10),
-
                   Text(
                     'يرجى إعادة تثبيت النسخة الصحيحة من التطبيق.',
                     textAlign: TextAlign.center,
