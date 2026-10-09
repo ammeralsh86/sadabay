@@ -27,13 +27,14 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   }
 
   Future<void> _login() async {
+    if (_loading) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     setState(() => _loading = true);
 
     try {
       final response = await AuthService.signIn(
-        login: _loginController.text,
+        login: _loginController.text.trim(),
         password: _passwordController.text,
       );
 
@@ -81,13 +82,17 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
         isOwner ? '/owner-dashboard' : '/dashboard',
       );
     } on AuthException catch (e) {
-      if (mounted) _showError(_translateAuthError(e.message));
+      if (mounted) {
+        _showError(_translateAuthError(e.message));
+      }
     } catch (_) {
       if (mounted) {
         _showError('حدث خطأ أثناء تسجيل الدخول. حاول مرة أخرى.');
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -112,7 +117,10 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, textDirection: TextDirection.rtl),
+        content: Text(
+          message,
+          textDirection: TextDirection.rtl,
+        ),
         backgroundColor: AppColors.danger,
         behavior: SnackBarBehavior.floating,
       ),
@@ -130,17 +138,36 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 16,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: AppColors.border),
+        borderSide: const BorderSide(
+          color: AppColors.border,
+        ),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(
           color: AppColors.primary,
+          width: 2,
+        ),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: AppColors.danger,
+        ),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(
+          color: AppColors.danger,
           width: 2,
         ),
       ),
@@ -152,210 +179,258 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF7F8FA),
+        resizeToAvoidBottomInset: true,
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
+              final availableHeight = constraints.maxHeight > 48
+                  ? constraints.maxHeight - 48
+                  : 0.0;
+
               return SingleChildScrollView(
+                keyboardDismissBehavior:
+                    ScrollViewKeyboardDismissBehavior.onDrag,
                 padding: const EdgeInsets.all(24),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - 48,
+                    minHeight: availableHeight,
                   ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 430),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const SizedBox(height: 12),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxWidth: 430,
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 12),
 
-                            Center(
-                              child: Container(
-                                width: 88,
-                                height: 88,
-                                decoration: BoxDecoration(
+                              Center(
+                                child: Container(
+                                  width: 88,
+                                  height: 88,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    borderRadius:
+                                        BorderRadius.circular(24),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: AppColors.primary
+                                            .withValues(alpha: 0.18),
+                                        blurRadius: 18,
+                                        offset: const Offset(0, 7),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons
+                                        .account_balance_wallet_rounded,
+                                    color: Colors.white,
+                                    size: 46,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 22),
+
+                              const Text(
+                                'مدى باي',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 30,
+                                  fontWeight: FontWeight.bold,
                                   color: AppColors.primary,
-                                  borderRadius: BorderRadius.circular(24),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.primary.withValues(
-                                        alpha: 0.18,
-                                      ),
-                                      blurRadius: 18,
-                                      offset: const Offset(0, 7),
-                                    ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.account_balance_wallet_rounded,
-                                  color: Colors.white,
-                                  size: 46,
                                 ),
                               ),
-                            ),
 
-                            const SizedBox(height: 22),
+                              const SizedBox(height: 6),
 
-                            const Text(
-                              'مدى باي',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.primary,
+                              const Text(
+                                'لوحة الإدارة',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 19,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(height: 6),
+                              const SizedBox(height: 8),
 
-                            const Text(
-                              'لوحة الإدارة',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 19,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
+                              const Text(
+                                'وكالة مدى باي لخدمات الرصيد وشحن التطبيقات',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(height: 8),
+                              const SizedBox(height: 28),
 
-                            const Text(
-                              'وكالة مدى باي لخدمات الرصيد وشحن التطبيقات',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-
-                            const SizedBox(height: 28),
-
-                            Card(
-                              color: Colors.white,
-                              elevation: 2,
-                              child: Padding(
-                                padding: const EdgeInsets.all(18),
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    const Text(
-                                      'تسجيل الدخول',
-                                      textAlign: TextAlign.center,
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-
-                                    const SizedBox(height: 22),
-
-                                    TextFormField(
-                                      controller: _loginController,
-                                      keyboardType:
-                                          TextInputType.emailAddress,
-                                      textDirection: TextDirection.ltr,
-                                      decoration: _decoration(
-                                        label:
-                                            'البريد الإلكتروني أو رقم الهاتف',
-                                        icon: Icons.person_outline_rounded,
-                                      ),
-                                      validator: (value) {
-                                        if (value == null ||
-                                            value.trim().isEmpty) {
-                                          return 'أدخل البريد الإلكتروني أو رقم الهاتف';
-                                        }
-                                        return null;
-                                      },
-                                    ),
-
-                                    const SizedBox(height: 16),
-
-                                    TextFormField(
-                                      controller: _passwordController,
-                                      obscureText: _obscurePassword,
-                                      textDirection: TextDirection.ltr,
-                                      decoration: _decoration(
-                                        label: 'كلمة المرور',
-                                        icon: Icons.lock_outline_rounded,
-                                        suffixIcon: IconButton(
-                                          onPressed: () {
-                                            setState(() {
-                                              _obscurePassword =
-                                                  !_obscurePassword;
-                                            });
-                                          },
-                                          icon: Icon(
-                                            _obscurePassword
-                                                ? Icons.visibility_outlined
-                                                : Icons.visibility_off_outlined,
-                                          ),
+                              Card(
+                                color: AppColors.card,
+                                elevation: 2,
+                                margin: EdgeInsets.zero,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(16),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      const Text(
+                                        'تسجيل الدخول',
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.textPrimary,
                                         ),
                                       ),
-                                      validator: (value) {
-                                        if (value == null || value.isEmpty) {
-                                          return 'أدخل كلمة المرور';
-                                        }
-                                        return null;
-                                      },
-                                      onFieldSubmitted: (_) {
-                                        if (!_loading) _login();
-                                      },
-                                    ),
 
-                                    const SizedBox(height: 22),
+                                      const SizedBox(height: 22),
 
-                                    SizedBox(
-                                      height: 52,
-                                      child: ElevatedButton(
-                                        onPressed:
-                                            _loading ? null : _login,
-                                        child: _loading
-                                            ? const SizedBox(
-                                                width: 24,
-                                                height: 24,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2.5,
-                                                  color: Colors.white,
-                                                ),
-                                              )
-                                            : const Text(
-                                                'تسجيل الدخول',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
+                                      TextFormField(
+                                        controller: _loginController,
+                                        enabled: !_loading,
+                                        keyboardType:
+                                            TextInputType.emailAddress,
+                                        textDirection:
+                                            TextDirection.ltr,
+                                        textInputAction:
+                                            TextInputAction.next,
+                                        autofillHints: const [
+                                          AutofillHints.username,
+                                        ],
+                                        decoration: _decoration(
+                                          label:
+                                              'البريد الإلكتروني أو رقم الهاتف',
+                                          icon: Icons.person_outline_rounded,
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.trim().isEmpty) {
+                                            return 'أدخل البريد الإلكتروني أو رقم الهاتف';
+                                          }
+                                          return null;
+                                        },
                                       ),
-                                    ),
-                                  ],
+
+                                      const SizedBox(height: 16),
+
+                                      TextFormField(
+                                        controller: _passwordController,
+                                        enabled: !_loading,
+                                        obscureText: _obscurePassword,
+                                        textDirection:
+                                            TextDirection.ltr,
+                                        textInputAction:
+                                            TextInputAction.done,
+                                        autofillHints: const [
+                                          AutofillHints.password,
+                                        ],
+                                        decoration: _decoration(
+                                          label: 'كلمة المرور',
+                                          icon: Icons.lock_outline_rounded,
+                                          suffixIcon: IconButton(
+                                            tooltip: _obscurePassword
+                                                ? 'إظهار كلمة المرور'
+                                                : 'إخفاء كلمة المرور',
+                                            onPressed: _loading
+                                                ? null
+                                                : () {
+                                                    setState(() {
+                                                      _obscurePassword =
+                                                          !_obscurePassword;
+                                                    });
+                                                  },
+                                            icon: Icon(
+                                              _obscurePassword
+                                                  ? Icons.visibility_outlined
+                                                  : Icons.visibility_off_outlined,
+                                            ),
+                                          ),
+                                        ),
+                                        validator: (value) {
+                                          if (value == null ||
+                                              value.isEmpty) {
+                                            return 'أدخل كلمة المرور';
+                                          }
+                                          return null;
+                                        },
+                                        onFieldSubmitted: (_) {
+                                          if (!_loading) {
+                                            _login();
+                                          }
+                                        },
+                                      ),
+
+                                      const SizedBox(height: 22),
+
+                                      SizedBox(
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              _loading ? null : _login,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                AppColors.primary,
+                                            foregroundColor: Colors.white,
+                                          ),
+                                          child: _loading
+                                              ? const SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2.5,
+                                                    color: Colors.white,
+                                                  ),
+                                                )
+                                              : const Text(
+                                                  'تسجيل الدخول',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight:
+                                                        FontWeight.bold,
+                                                  ),
+                                                ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
 
-                            const SizedBox(height: 20),
+                              const SizedBox(height: 20),
 
-                            const Text(
-                              'تطوير م / أبو معاوية الشبيبي',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppColors.textSecondary,
+                              const Text(
+                                'تطوير م / أبو معاوية الشبيبي',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            ),
 
-                            const SizedBox(height: 12),
-                          ],
+                              const SizedBox(height: 12),
+                            ],
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               );
