@@ -1,97 +1,96 @@
+
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/supabase/supabase_config.dart';
 
+/// خدمات المصادقة والتعامل مع بيانات المستخدم والأدوار.
 class AuthService {
   AuthService._();
 
-  static final SupabaseClient _supabase = SupabaseConfig.client;
+  static SupabaseClient get _client => SupabaseConfig.client;
 
   /// تسجيل الدخول بالبريد الإلكتروني أو رقم الهاتف.
-  ///
-  /// إذا كانت القيمة تحتوي على @ يتم التعامل معها كبريد إلكتروني.
-  /// غير ذلك يتم التعامل معها كرقم هاتف.
   static Future<AuthResponse> signIn({
     required String login,
     required String password,
   }) async {
     final value = login.trim();
 
-    if (value.isEmpty) {
-      throw const AuthException('يرجى إدخال البريد الإلكتروني أو رقم الهاتف.');
-    }
-
-    if (password.isEmpty) {
-      throw const AuthException('يرجى إدخال كلمة المرور.');
+    if (value.isEmpty || password.isEmpty) {
+      throw const AuthException('أدخل بيانات تسجيل الدخول');
     }
 
     if (value.contains('@')) {
-      return await _supabase.auth.signInWithPassword(
+      return _client.auth.signInWithPassword(
         email: value,
         password: password,
       );
     }
 
-    return await _supabase.auth.signInWithPassword(
+    return _client.auth.signInWithPassword(
       phone: value,
       password: password,
     );
   }
 
   /// المستخدم الحالي.
-  static User? get currentUser {
-    return _supabase.auth.currentUser;
-  }
+  static User? get currentUser => _client.auth.currentUser;
 
-  /// جلب بيانات الملف الشخصي للمستخدم الحالي.
+  /// جلب ملف المستخدم.
   static Future<Map<String, dynamic>?> getCurrentProfile() async {
     final user = currentUser;
+    if (user == null) return null;
 
-    if (user == null) {
-      return null;
-    }
-
-    return await _supabase
+    return await _client
         .from('profiles')
-        .select()
+        .select('full_name, status')
         .eq('id', user.id)
         .maybeSingle();
   }
 
-  /// جلب أدوار المستخدم الحالي.
+  /// جلب أدوار المستخدم بالطريقة المستخدمة في الكود الأصلي.
   static Future<List<Map<String, dynamic>>> getCurrentRoles() async {
     final user = currentUser;
+    if (user == null) return [];
 
-    if (user == null) {
-      return [];
-    }
-
-    final result = await _supabase
+    final roleRows = await _client
         .from('user_roles')
-        .select('role_id, roles(name)')
+        .select('role_id')
         .eq('user_id', user.id);
 
-    return List<Map<String, dynamic>>.from(result);
-  }
+    final roles = <Map<String, dynamic>>[];
 
-  /// التحقق من أن المستخدم لديه الدور المطلوب.
-  static Future<bool> hasRole(String roleName) async {
-    final roles = await getCurrentRoles();
+    for (final row in roleRows) {
+      final role = await _client
+          .from('roles')
+          .select('name')
+          .eq('id', row['role_id'])
+          .maybeSingle();
 
-    for (final role in roles) {
-      final roleData = role['roles'];
-
-      if (roleData is Map &&
-          roleData['name']?.toString().toUpperCase() ==
-              roleName.toUpperCase()) {
-        return true;
+      if (role != null) {
+        roles.add({
+          'role_id': row['role_id'],
+          'name': role['name']?.toString() ?? '',
+        });
       }
     }
 
-    return false;
+    return roles;
+  }
+
+  /// التحقق من دور معين.
+  static Future<bool> hasRole(String roleName) async {
+    final roles = await getCurrentRoles();
+    final expected = roleName.toUpperCase();
+
+    return roles.any(
+      (role) =>
+          role['name']?.toString().toUpperCase() == expected,
+    );
   }
 
   /// تسجيل الخروج.
   static Future<void> signOut() async {
-    await SupabaseConfig.signOut();
+    await _client.auth.signOut();
   }
 }
