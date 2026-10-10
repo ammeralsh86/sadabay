@@ -427,6 +427,17 @@ class _AdminLoginPageState extends State<AdminLoginPage> {
 
                               const SizedBox(height: 12),
                             ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }
+}
