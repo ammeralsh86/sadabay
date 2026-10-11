@@ -231,25 +231,46 @@ class _MadaPayState extends State<MadaPay> {
     final theme=ThemeData(useMaterial3:true,colorScheme:ColorScheme.fromSeed(seedColor:primary),scaffoldBackgroundColor:const Color(0xFFF2F6F4),inputDecorationTheme:InputDecorationTheme(filled:true,fillColor:Colors.white,border:OutlineInputBorder(borderRadius:BorderRadius.circular(14))));
     if(!loggedIn)return MaterialApp(debugShowCheckedModeBanner:false,title:'مدى باي',theme:theme,home:Directionality(textDirection:TextDirection.rtl,child:AnimatedSwitcher(duration:const Duration(milliseconds:450),transitionBuilder:(child,a){final r=Tween<double>(begin:.13,end:0).animate(a);return FadeTransition(opacity:a,child:AnimatedBuilder(animation:r,child:child,builder:(c,ch)=>Transform(alignment:Alignment.center,transform:Matrix4.identity()..setEntry(3,2,.001)..rotateY(r.value),child:ch)));},child:showWelcome?KeyedSubtree(key:const ValueKey('welcome'),child:welcomePage()):showRegister?KeyedSubtree(key:const ValueKey('register'),child:registerPage()):KeyedSubtree(key:const ValueKey('login'),child:loginPage()))));
     final pages=[homePage(),servicesPage(),reportsPage(),accountPage()];
-    return MaterialApp(debugShowCheckedModeBanner:false,title:'مدى باي',theme:theme,home:Directionality(textDirection:TextDirection.rtl,child:Scaffold(body:Column(children:[header(),Expanded(child:pages[page.clamp(0,3)]))]),bottomNavigationBar:NavigationBar(selectedIndex:page,onDestinationSelected:(i)=>setState(()=>page=i),destinations:const[
-      NavigationDestination(icon:Icon(Icons.home_outlined),selectedIcon:Icon(Icons.home),label:'الرئيسية'),
-      NavigationDestination(icon:Icon(Icons.grid_view),label:'الخدمات'),
-      NavigationDestination(icon:Icon(Icons.receipt_long),label:'التقارير'),
-      NavigationDestination(icon:Icon(Icons.person_outline),label:'حسابي')
-    ])));
-  }
-}
-
-class _WelcomeIcon extends StatelessWidget{
-  final IconData icon; final String label;
-  const _WelcomeIcon(this.icon,this.label);
-  @override Widget build(BuildContext context)=>SizedBox(width:112,child:Column(children:[
-    Container(width:50,height:50,decoration:BoxDecoration(color:const Color(0xFFD5EEE6),borderRadius:BorderRadius.circular(16)),child:Icon(icon,color:const Color(0xFF147D64),size:27)),
-    const SizedBox(height:7),Text(label,textAlign:TextAlign.center,style:const TextStyle(fontSize:12,fontWeight:FontWeight.w600,color:Color(0xFF40564F)))
-  ]));
-}
-class _QuickAction extends StatelessWidget{
-  final IconData icon; final String label; final VoidCallback action;
-  const _QuickAction(this.icon,this.label,this.action);
-  @override Widget build(BuildContext context)=>InkWell(onTap:action,child:Padding(padding:const EdgeInsets.all(5),child:Column(children:[Icon(icon,color:Colors.white,size:25),const SizedBox(height:5),Text(label,style:const TextStyle(color:Colors.white))])));
-}
+    
+return MaterialApp(
+  debugShowCheckedModeBanner: false,
+  title: 'مدى باي',
+  theme: theme,
+  home: Directionality(
+    textDirection: TextDirection.rtl,
+    child: Scaffold(
+      body: Column(
+        children: [
+          header(),
+          Expanded(
+            child: pages[page.clamp(0, 3)],
+          ),
+        ],
+      ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: page,
+        onDestinationSelected: (i) {
+          setState(() => page = i);
+        },
+        destinations: const [
+          NavigationDestination(
+            icon: Icon(Icons.home_outlined),
+            label: 'الرئيسية',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.miscellaneous_services_outlined),
+            label: 'الخدمات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.receipt_long_outlined),
+            label: 'العمليات',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person_outline),
+            label: 'حسابي',
+          ),
+        ],
+      ),
+    ),
+  ),
+);
