@@ -15,197 +15,121 @@ class UpdateChecker {
     BuildContext context, {
     bool showNoUpdateMessage = false,
   }) async {
-    if (!context.mounted) return;
-
     try {
       final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version.trim();
+      final currentVersion = packageInfo.version;
 
       final settings = await Supabase.instance.client
           .from('app_settings')
-          .select(
-            'latest_version, min_version, apk_url, update_notes, '
-            'update_force, maintenance_mode, maintenance_message',
-          )
+          .select()
           .eq('id', 1)
           .maybeSingle();
 
-      if (settings == null) {
-        if (showNoUpdateMessage && context.mounted) {
-          _showMessage(context, 'إعدادات التحديث غير متوفرة.');
-        }
-        return;
-      }
+      if (settings == null) return;
 
-      final latest = settings['latest_version']?.toString().trim() ?? '';
+      final latest = (settings['latest_version']?.toString() ?? '')
+          .replaceAll('v', '')
+          .trim();
 
-      if (latest.isEmpty || !_isValidVersion(latest)) {
-        if (showNoUpdateMessage && context.mounted) {
-          _showMessage(context, 'رقم إصدار التحديث غير صالح.');
-        }
-        return;
-      }
+      if (latest.isEmpty) return;
 
-      final minVersion = settings['min_version']?.toString().trim() ?? latest;
+      final minVersion = ((settings['min_version']?.toString() ?? latest))
+          .replaceAll('v', '')
+          .trim();
 
-      if (!_isValidVersion(minVersion)) {
-        if (showNoUpdateMessage && context.mounted) {
-          _showMessage(context, 'الحد الأدنى للإصدار غير صالح.');
-        }
-        return;
-      }
+      final apkUrl = (settings['apk_url']?.toString() ?? '')
+              .isNotEmpty
+          ? settings['apk_url'].toString()
+          : 'https://github.com/$owner/$repo/releases/latest';
 
-      final configuredUrl = settings['apk_url']?.toString().trim();
-      final apkUrl = configuredUrl == null || configuredUrl.isEmpty
-          ? 'https://github.com/$owner/$repo/releases/latest'
-          : configuredUrl;
+      final notes = (settings['update_notes']?.toString() ?? '')
+              .isNotEmpty
+          ? settings['update_notes'].toString()
+          : 'يوجد تحديث جديد يحسن الأداء';
 
-      final notes = settings['update_notes']?.toString().trim();
-      final forceUpdate = settings['update_force'] == true;
-      final maintenance = settings['maintenance_mode'] == true;
-
-      if (!context.mounted) return;
+      final forceUpdate = (settings['update_force'] == true);
+      final maintenance = (settings['maintenance_mode'] == true);
 
       if (maintenance) {
+        if (!context.mounted) return;
         _showMaintenanceDialog(
           context,
-          settings['maintenance_message']?.toString().trim().isNotEmpty == true
-              ? settings['maintenance_message'].toString().trim()
-              : 'التطبيق تحت الصيانة حالياً.',
+          (settings['maintenance_message']?.toString() ?? '')
+                  .isNotEmpty
+              ? settings['maintenance_message'].toString()
+              : 'التطبيق تحت الصيانة حالياً',
         );
         return;
       }
 
-      final isForce = forceUpdate || _isNewer(minVersion, currentVersion);
-
       if (_isNewer(latest, currentVersion)) {
         if (!context.mounted) return;
+        final isForce = forceUpdate || _isNewer(minVersion, currentVersion);
         _showUpdateDialog(
           context,
           currentVersion,
           latest,
-          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
+          notes,
           apkUrl,
           isForce,
         );
         return;
       }
 
-      if (isForce) {
-        if (!context.mounted) return;
-        _showUpdateDialog(
-          context,
-          currentVersion,
-          latest,
-          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
-          apkUrl,
-          true,
-        );
-        return;
-      }
-
       if (showNoUpdateMessage && context.mounted) {
-        _showMessage(context, 'أنت على أحدث إصدار ($currentVersion).');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('أنت على أحدث إصدار ($currentVersion)'),
+            backgroundColor: _lightGold,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (_) {
       if (showNoUpdateMessage && context.mounted) {
-        _showMessage(context, 'تعذر الاتصال للتحقق من التحديث.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يوجد اتصال للتحقق من التحديث'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     }
   }
 
-  static bool _isValidVersion(String version) {
-    final normalized = version.trim();
-    if (normalized.isEmpty) return false;
-
-    final withoutPrefix = normalized.replaceFirst(RegExp(r'^[vV]'), '');
-    final parts = withoutPrefix
-        .split('+')
-        .first
-        .split('-')
-        .first
-        .split('.')
-        .where((part) => part.trim().isNotEmpty)
-        .map((part) => part.trim())
-        .toList();
-
-    if (parts.isEmpty) return false;
-
-    return parts.every(
-      (part) => int.tryParse(part) != null && int.parse(part) >= 0,
-    );
-  }
-
-  static List<int> _parseVersionParts(String version) {
-    final normalized = version.trim().replaceFirst(RegExp(r'^[vV]'), '');
-    return RegExp(r'\d+')
-        .allMatches(normalized)
-        .map((match) => int.parse(match.group(0)!))
-        .toList();
-  }
-
   static bool _isNewer(String latest, String current) {
-    if (!_isValidVersion(latest) || !_isValidVersion(current)) {
+    try {
+      final l = latest.split('.').map(int.parse).toList();
+      final c = current.split('.').map(int.parse).toList();
+      for (var i = 0; i < l.length; i++) {
+        if (i >= c.length) return true;
+        if (l[i] > c[i]) return true;
+        if (l[i] < c[i]) return false;
+      }
       return false;
+    } catch (_) {
+      return latest != current;
     }
-
-    final latestParts = _parseVersionParts(latest);
-    final currentParts = _parseVersionParts(current);
-
-    final length = latestParts.length > currentParts.length
-        ? latestParts.length
-        : currentParts.length;
-
-    for (var i = 0; i < length; i++) {
-      final l = i < latestParts.length ? latestParts[i] : 0;
-      final c = i < currentParts.length ? currentParts[i] : 0;
-
-      if (l > c) return true;
-      if (l < c) return false;
-    }
-
-    return false;
   }
 
-  static void _showMessage(BuildContext context, String message) {
-    if (!context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          textDirection: TextDirection.rtl,
-        ),
-        backgroundColor: _cardDark,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-
-  static void _showMaintenanceDialog(
-    BuildContext context,
-    String message,
-  ) {
-    showDialog<void>(
+  static void _showMaintenanceDialog(BuildContext context, String message) {
+    showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
-        child: PopScope(
-          canPop: false,
-          child: AlertDialog(
-            backgroundColor: _cardDark,
-            title: const Text(
-              'وضع الصيانة',
-              style: TextStyle(
-                color: _lightGold,
-                fontWeight: FontWeight.bold,
-              ),
+        child: AlertDialog(
+          backgroundColor: _cardDark,
+          title: const Text(
+            'وضع الصيانة',
+            style: TextStyle(
+              color: _lightGold,
+              fontWeight: FontWeight.bold,
             ),
-            content: Text(
-              message,
-              style: const TextStyle(color: Colors.white70),
-            ),
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(color: Colors.white70),
           ),
         ),
       ),
@@ -220,7 +144,7 @@ class UpdateChecker {
     String url,
     bool force,
   ) {
-    showDialog<void>(
+    showDialog(
       context: context,
       barrierDismissible: !force,
       builder: (ctx) => PopScope(
@@ -241,7 +165,7 @@ class UpdateChecker {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'الحالي: $current ← الجديد: $latest',
+                  'الحالي: $current -> الجديد: $latest',
                   style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
@@ -276,30 +200,12 @@ class UpdateChecker {
                   backgroundColor: _lightGold,
                 ),
                 onPressed: () async {
-                  final uri = Uri.tryParse(url);
-
-                  if (uri == null ||
-                      (uri.scheme != 'https' && uri.scheme != 'http') ||
-                      uri.host.isEmpty) {
-                    if (ctx.mounted) {
-                      _showMessage(ctx, 'رابط التحديث غير صالح.');
-                    }
-                    return;
-                  }
-
-                  try {
-                    final opened = await launchUrl(
+                  final uri = Uri.parse(url);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(
                       uri,
                       mode: LaunchMode.externalApplication,
                     );
-
-                    if (!opened && ctx.mounted) {
-                      _showMessage(ctx, 'تعذر فتح رابط التحديث.');
-                    }
-                  } catch (_) {
-                    if (ctx.mounted) {
-                      _showMessage(ctx, 'تعذر فتح رابط التحديث.');
-                    }
                   }
                 },
                 icon: const Icon(Icons.download_rounded, color: _navy),
