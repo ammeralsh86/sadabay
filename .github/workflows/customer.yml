@@ -2,60 +2,47 @@ name: Build Customer App
 
 on:
   push:
-    branches:
-      - main
     paths:
-      - "customer_app/**"
-      - ".github/workflows/customer.yml"
-  workflow_dispatch:
+      - 'customer_app/**'
+    branches: [main]
 
 jobs:
-  build-customer:
-    name: Build Customer APK
+  build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: stable
-       
-      - name: Prepare Customer App
-        working-directory: customer_app
+          flutter-version: '3.24.5'
+          channel: 'stable'
+          cache: true
+
+      - name: Clean
         run: |
-          flutter create --platforms=android --project-name=mada_pay_customer .
+          cd customer_app
+          flutter clean
 
-      - name: Get Customer Dependencies
-        working-directory: customer_app
-        run: flutter pub get
-
-      - name: Enable Internet Permission
-        working-directory: customer_app
+      - name: Get dependencies
         run: |
-          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
-          echo "Internet permission enabled."
+          cd customer_app
+          flutter pub get
 
-      - name: Build Customer APK
-        working-directory: customer_app
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      - name: Analyze
         run: |
-          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_KEY" ]; then
-            echo "ERROR: SUPABASE_URL or SUPABASE_KEY is missing in GitHub Actions Secrets."
-            exit 1
-          fi
+          cd customer_app
+          flutter analyze --no-fatal-infos
 
+      - name: Build APK
+        run: |
+          cd customer_app
           flutter build apk --release \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_KEY="$SUPABASE_KEY"
+            --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
+            --dart-define=SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
 
-      - name: Upload Customer APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: mada-pay-customer-apk
+          name: customer-app-apk
           path: customer_app/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
