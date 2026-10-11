@@ -32,6 +32,12 @@ jobs:
         working-directory: customer_app
         run: flutter pub get
 
+      - name: Enable Internet Permission
+        working-directory: admin_app
+        run: |
+          sed -i '/<manifest/a\    <uses-permission android:name="android.permission.INTERNET" />' android/app/src/main/AndroidManifest.xml
+          echo "Internet permission enabled."
+
       - name: Build Customer APK
         working-directory: customer_app
         env:
