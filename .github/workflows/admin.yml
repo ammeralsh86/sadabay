@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - 'admin_app/**'
-      - '.github/workflows/**'
-
   workflow_dispatch:
 
 jobs:
@@ -26,23 +22,16 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Show Flutter Version
-        run: flutter --version
-
       - name: Clean Project
-        working-directory: admin_app
         run: flutter clean
 
       - name: Get Dependencies
-        working-directory: admin_app
         run: flutter pub get
 
       - name: Analyze Project
-        working-directory: admin_app
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
-        working-directory: admin_app
         run: |
           flutter build apk --release \
             --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
@@ -52,6 +41,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: admin-app-apk
-          path: admin_app/build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 7
