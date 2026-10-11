@@ -834,7 +834,12 @@ class _LoginPageState extends State<LoginPage> {
 class CustomerHomePage extends StatefulWidget {
   const CustomerHomePage({super.key});
   @override
-  State<CustomerHomePage> createState() => _CustomerHomePageState();
+void initState() {
+  super.initState();
+  loadData();
+  Future.delayed(const Duration(seconds: 3), () {
+    if (mounted) UpdateChecker.checkForUpdate(context);
+  });
 }
 
 class _CustomerHomePageState extends State<CustomerHomePage> {
