@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
+import 'update_checker.dart';
 
 const navy = Color(0xFF0A1931);
 const navyLight = Color(0xFF121E3B);
@@ -831,15 +832,11 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
+// ================== تم إصلاح هذا الكلاس بالكامل ==================
 class CustomerHomePage extends StatefulWidget {
   const CustomerHomePage({super.key});
   @override
-void initState() {
-  super.initState();
-  loadData();
-  Future.delayed(const Duration(seconds: 3), () {
-    if (mounted) UpdateChecker.checkForUpdate(context);
-  });
+  State<CustomerHomePage> createState() => _CustomerHomePageState();
 }
 
 class _CustomerHomePageState extends State<CustomerHomePage> {
@@ -852,6 +849,11 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   void initState() {
     super.initState();
     loadData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        UpdateChecker.checkForUpdate(context);
+      }
+    });
   }
 
   Future<void> loadData() async {
@@ -1117,6 +1119,10 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
           ],
         ),
         actions: [
+          IconButton(
+            onPressed: () => UpdateChecker.checkForUpdate(context, showNoUpdateMessage: true),
+            icon: const Icon(Icons.system_update, color: lightGold),
+          ),
           IconButton(
             onPressed: loadData,
             icon: const Icon(Icons.refresh, color: lightGold),
