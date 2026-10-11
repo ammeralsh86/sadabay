@@ -231,9 +231,165 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         message(context, e.toString().replaceFirst('Exception: ', ''));
       }
+
+class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
+  @override
+  State<LoginPage> createState() => _LoginPageState();
+}
+
+class _LoginPageState extends State<LoginPage> {
+  final loginController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  static const navy = Color(0xFF0A1931);
+  static const navyLight = Color(0xFF121E3B);
+  static const cardDark = Color(0xFF1A2744);
+  static const gold = Color(0xFFD4AF37);
+  static const lightGold = Color(0xFFE8C765);
+  static const mutedGold = Color(0xFFB89A5A);
+
+  bool loading = false;
+  bool obscure = true;
+
+  @override
+  void dispose() {
+    loginController.dispose();
+    passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> login() async {
+    final loginValue = loginController.text.trim();
+    final password = passwordController.text;
+
+    if (loginValue.isEmpty || password.isEmpty) {
+      message(context, 'أدخل اسم المستخدم أو البريد الإلكتروني أو الهاتف وكلمة المرور');
+      return;
+    }
+
+    setState(() => loading = true);
+
+    try {
+      AuthResponse response;
+
+      if (loginValue.contains('@')) {
+        response = await db.auth.signInWithPassword(
+          email: loginValue,
+          password: password,
+        );
+      } else {
+        // تسجيل الدخول برقم الهاتف أو باسم المستخدم.
+        // Supabase لا يدعم اسم المستخدم مباشرة؛ سنحاول الهاتف أولاً.
+        response = await db.auth.signInWithPassword(
+          phone: loginValue,
+          password: password,
+        );
+      }
+
+      final user = response.user;
+      if (user == null) throw Exception('تعذر التحقق من الحساب');
+
+      final profile = await db
+          .from('profiles')
+          .select('id, full_name, status')
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (profile == null) {
+        await db.auth.signOut();
+        throw Exception('لا يوجد ملف مستخدم مرتبط بهذا الحساب');
+      }
+
+      if (profile['status']?.toString().toUpperCase() != 'ACTIVE') {
+        await db.auth.signOut();
+        throw Exception('الحساب غير مفعل');
+      }
+
+      final rows = await db
+          .from('user_roles')
+          .select('role_id, roles(name)')
+          .eq('user_id', user.id);
+
+      final roleNames = <String>[];
+
+      for (final row in rows) {
+        final relation = row['roles'];
+        if (relation is Map && relation['name'] != null) {
+          roleNames.add(relation['name'].toString().toUpperCase());
+        }
+      }
+
+      const allowed = {
+        'OWNER',
+        'ADMIN',
+        'MANAGER',
+        'EMPLOYEE',
+        'AGENT',
+        'DISTRIBUTOR',
+      };
+
+      final matched = roleNames.where(allowed.contains).toList();
+
+      if (matched.isEmpty) {
+        await db.auth.signOut();
+        throw Exception('هذا الحساب لا يملك دورًا إداريًا');
+      }
+
+      final role = matched.contains('OWNER')
+          ? 'OWNER'
+          : matched.contains('ADMIN')
+              ? 'ADMIN'
+              : matched.first;
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminShell(
+            name: readable(profile['full_name']),
+            role: role,
+          ),
+        ),
+      );
+    } on AuthException catch (e) {
+      if (mounted) message(context, e.message);
+    } catch (e) {
+      if (mounted) {
+        message(context, e.toString().replaceFirst('Exception: ', ''));
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
+  }
+
+  InputDecoration fieldDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: mutedGold),
+      prefixIcon: Icon(icon, color: lightGold),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: cardDark,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: gold.withOpacity(0.35)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: gold.withOpacity(0.35)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: lightGold, width: 1.8),
+      ),
+    );
   }
 
   @override
@@ -244,9 +400,9 @@ class _LoginPageState extends State<LoginPage> {
         body: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              begin: Alignment.topRight,
-              end: Alignment.bottomLeft,
-              colors: [deepGreen, green, Color(0xFF0A463A)],
+              colors: [navy, Color(0xFF0A1525), navyLight],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
           ),
           child: SafeArea(
@@ -254,121 +410,232 @@ class _LoginPageState extends State<LoginPage> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(22),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 440),
+                  constraints: const BoxConstraints(maxWidth: 460),
                   child: Column(
                     children: [
+                      const SizedBox(height: 12),
+
+                      // الشعار الذهبي
                       Container(
-                        width: 90,
-                        height: 90,
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
+                        width: 112,
+                        height: 112,
+                        decoration: BoxDecoration(
                           shape: BoxShape.circle,
+                          gradient: const LinearGradient(
+                            colors: [lightGold, gold],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: gold.withOpacity(0.24),
+                              blurRadius: 30,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.account_balance_wallet_rounded,
-                          size: 48,
-                          color: green,
+                          size: 58,
+                          color: navy,
                         ),
                       ),
-                      const SizedBox(height: 20),
+
+                      const SizedBox(height: 22),
+
                       const Text(
-                        'مـدى بـاي',
+                        'وكالة مدى باي',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: Colors.white,
                           fontSize: 34,
                           fontWeight: FontWeight.w900,
+                          color: lightGold,
+                          letterSpacing: 0.5,
                         ),
                       ),
-                      const SizedBox(height: 6),
+
+                      const SizedBox(height: 8),
+
                       const Text(
-                        'لوحة الإدارة والتحكم',
-                        style: TextStyle(color: Color(0xFFD8E9E3)),
+                        'لخدمات الدفع الرقمية الحديثة',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          color: gold,
+                        ),
                       ),
-                      const SizedBox(height: 30),
+
+                      const SizedBox(height: 6),
+
+                      const Text(
+                        'وشحن الرصيد والتطبيقات والألعاب',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: mutedGold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 32),
+
                       Container(
                         padding: const EdgeInsets.all(24),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: const Color(0xFF101D35),
                           borderRadius: BorderRadius.circular(26),
+                          border: Border.all(
+                            color: gold.withOpacity(0.45),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.20),
+                              blurRadius: 24,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             const Text(
-                              'مرحبًا بك',
+                              'تسجيل دخول الإدارة',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                color: deepGreen,
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
+                                color: lightGold,
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
-                            const SizedBox(height: 22),
+
+                            const SizedBox(height: 8),
+
+                            const Text(
+                              'مرحبًا بك في لوحة التحكم الخاصة بوكالة مدى باي',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: mutedGold,
+                                fontSize: 13,
+                              ),
+                            ),
+
+                            const SizedBox(height: 26),
+
                             TextField(
                               controller: loginController,
                               textDirection: TextDirection.ltr,
-                              decoration: const InputDecoration(
-                                labelText: 'البريد الإلكتروني أو الهاتف',
-                                prefixIcon: Icon(Icons.person_outline),
+                              keyboardType: TextInputType.text,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: fieldDecoration(
+                                label: 'البريد الإلكتروني أو رقم الهاتف',
+                                icon: Icons.person_outline_rounded,
                               ),
                             ),
-                            const SizedBox(height: 14),
+
+                            const SizedBox(height: 16),
+
                             TextField(
                               controller: passwordController,
                               obscureText: obscure,
                               textDirection: TextDirection.ltr,
-                              decoration: InputDecoration(
-                                labelText: 'كلمة المرور',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                suffixIcon: IconButton(
-                                  onPressed: () =>
-                                      setState(() => obscure = !obscure),
+                              style: const TextStyle(color: Colors.white),
+                              decoration: fieldDecoration(
+                                label: 'كلمة المرور',
+                                icon: Icons.lock_outline_rounded,
+                                suffix: IconButton(
+                                  onPressed: () {
+                                    setState(() => obscure = !obscure);
+                                  },
                                   icon: Icon(
                                     obscure
                                         ? Icons.visibility_off
                                         : Icons.visibility,
+                                    color: lightGold,
                                   ),
                                 ),
                               ),
                               onSubmitted: (_) => login(),
                             ),
-                            const SizedBox(height: 22),
-                            FilledButton.icon(
-                              onPressed: loading ? null : login,
-                              icon: loading
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Icon(Icons.login),
-                              label: Padding(
-                                padding: const EdgeInsets.all(13),
-                                child: Text(
-                                  loading ? 'جارٍ التحقق...' : 'تسجيل الدخول',
+
+                            const SizedBox(height: 24),
+
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [lightGold, gold],
                                 ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: gold.withOpacity(0.20),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 5),
+                                  ),
+                                ],
                               ),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: green,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
+                              child: FilledButton.icon(
+                                onPressed: loading ? null : login,
+                                icon: loading
+                                    ? const SizedBox(
+                                        width: 19,
+                                        height: 19,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: navy,
+                                        ),
+                                      )
+                                    : const Icon(
+                                        Icons.login_rounded,
+                                        color: navy,
+                                      ),
+                                label: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 15,
+                                  ),
+                                  child: Text(
+                                    loading
+                                        ? 'جارٍ التحقق من الحساب...'
+                                        : 'تسجيل الدخول',
+                                    style: const TextStyle(
+                                      color: navy,
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  disabledBackgroundColor:
+                                      Colors.white24,
+                                  shadowColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
                                 ),
                               ),
                             ),
-                            const SizedBox(height: 16),
+
+                            const SizedBox(height: 20),
+
                             const Text(
-                              'وكالة مدى باي لخدمات الرصيد وشحن التطبيقات',
+                              'بوابة الإدارة الآمنة',
                               textAlign: TextAlign.center,
                               style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
+                                color: mutedGold,
+                                fontSize: 12,
                               ),
                             ),
                           ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 22),
+
+                      const Text(
+                        'وكالة مدى باي ©',
+                        style: TextStyle(
+                          color: mutedGold,
+                          fontSize: 12,
                         ),
                       ),
                     ],
@@ -382,6 +649,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
 
 // ------------------------------------------------------------
 // القائمة الإدارية والواجهة الاحترافية
