@@ -1,7 +1,9 @@
+المسار: "customer_app/lib/main.dart"
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:io';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:math';
 
 const green = Color(0xFF0D5C4A);
@@ -28,11 +30,7 @@ Future<void> main() async {
     return;
   }
 
-  await Supabase.initialize(
-    url: supabaseUrl,
-    anonKey: supabaseKey,
-  );
-
+  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
   runApp(const MadaPayApp());
 }
 
@@ -110,9 +108,7 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Scaffold(
-            body: Center(
-              child: Text('تعذر التحقق من جلسة الدخول.'),
-            ),
+            body: Center(child: Text('تعذر التحقق من جلسة الدخول.')),
           );
         }
 
@@ -138,6 +134,7 @@ void showMessage(BuildContext context, String text) {
 // --------------------------------------------------
 // بوابة التحقق من تفعيل الجهاز
 // --------------------------------------------------
+
 class DeviceCheckGate extends StatefulWidget {
   const DeviceCheckGate({super.key});
 
@@ -148,7 +145,8 @@ class DeviceCheckGate extends StatefulWidget {
 class _DeviceCheckGateState extends State<DeviceCheckGate> {
   bool checking = true;
   bool isDeviceAuthorized = false;
-  String deviceId = 'MADA_DEVICE_SECURE_${Platform.operatingSystem}_${Random().nextInt(999999)}';
+  String deviceId = '';
+  String? checkError;
 
   @override
   void initState() {
@@ -156,71 +154,139 @@ class _DeviceCheckGateState extends State<DeviceCheckGate> {
     _checkDeviceAuthorization();
   }
 
+  Future<String> _getStableDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    const key = 'mada_pay_installation_device_id';
+
+    String? savedId = prefs.getString(key);
+    if (savedId != null && savedId.isNotEmpty) {
+      return savedId;
+    }
+
+    final random = Random.secure();
+    final timestamp = DateTime.now().microsecondsSinceEpoch.toRadixString(16);
+    final randomPart = List.generate(
+      32,
+      (_) => random.nextInt(16).toRadixString(16),
+    ).join();
+
+    savedId = 'MADA-$timestamp-$randomPart';
+    await prefs.setString(key, savedId);
+    return savedId;
+  }
+
   Future<void> _checkDeviceAuthorization() async {
+    if (mounted) {
+      setState(() {
+        checking = true;
+        checkError = null;
+      });
+    }
+
     try {
       final user = supabase.auth.currentUser;
-      if (user == null) return;
+      if (user == null) {
+        if (!mounted) return;
+        setState(() {
+          checking = false;
+          isDeviceAuthorized = false;
+          checkError = 'انتهت جلسة الدخول. سجّل الدخول مجدداً.';
+        });
+        return;
+      }
 
-      await supabase.from('profiles').update({
-        'device_id': deviceId,
-        'permissions_granted': true,
-        'last_login_client': 'Android/iOS Secure Environment Bypass'
-      }).eq('id', user.id);
+      final localDeviceId = await _getStableDeviceId();
 
+      if (!mounted) return;
+      setState(() => deviceId = localDeviceId);
+
+      // نقرأ حالة الجهاز فقط؛ لا نغيّر صلاحياته من تطبيق العميل.
       final profile = await supabase
           .from('profiles')
-          .select('device_id, device_status')
+          .select('device_id, device_status, status')
           .eq('id', user.id)
           .maybeSingle();
 
-      if (profile != null &&
-          profile['device_id'] == deviceId &&
-          profile['device_status']?.toString().toUpperCase() == 'ACTIVE') {
-        setState(() {
-          isDeviceAuthorized = true;
-          checking = false;
-        });
-      } else {
-        await supabase.from('profiles').update({
-          'device_id': deviceId,
-          'device_status': 'PENDING',
-        }).eq('id', user.id);
+      final profileStatus =
+          profile?['status']?.toString().toUpperCase() ?? '';
+      final registeredDeviceId = profile?['device_id']?.toString() ?? '';
+      final deviceStatus =
+          profile?['device_status']?.toString().toUpperCase() ?? '';
 
-        setState(() {
-          isDeviceAuthorized = false;
-          checking = false;
-        });
-      }
+      final authorized = profile != null &&
+          registeredDeviceId.isNotEmpty &&
+          registeredDeviceId == localDeviceId &&
+          deviceStatus == 'ACTIVE' &&
+          profileStatus == 'ACTIVE';
+
+      if (!mounted) return;
+      setState(() {
+        isDeviceAuthorized = authorized;
+        checking = false;
+        checkError = null;
+      });
     } catch (e) {
-      setState(() => checking = false);
+      if (!mounted) return;
+      setState(() {
+        checking = false;
+        isDeviceAuthorized = false;
+        checkError =
+            'تعذر التحقق من الجهاز. تحقق من اتصال الإنترنت ثم أعد المحاولة.';
+      });
     }
   }
 
   Future<void> launchWhatsApp() async {
-    final url = Uri.parse(adminWhatsAppUrl);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) showMessage(context, 'تعذر فتح رابط واتساب');
+    final message = Uri.encodeComponent(
+      'السلام عليكم، أرجو تفعيل جهازي في تطبيق مدى باي.\n'
+      'معرّف الجهاز: $deviceId\n'
+      'البريد: ${supabase.auth.currentUser?.email ?? 'غير متوفر'}',
+    );
+
+    final url = Uri.parse('$adminWhatsAppUrl?text=$message');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        final fallback = Uri.parse(
+          'https://wa.me/967772507268?text=$message',
+        );
+        await launchUrl(fallback, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      if (mounted) showMessage(context, 'تعذر فتح واتساب.');
     }
   }
 
   Future<void> launchSMS() async {
-    final message = 'أرجو تفعيل جهازي مدى باي. Device ID: $deviceId';
-    final url = Uri.parse('sms:?body=${Uri.encodeComponent(message)}');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    } else {
-      if (mounted) showMessage(context, 'تعذر فتح تطبيق الرسائل');
+    final message = Uri.encodeComponent(
+      'أرجو تفعيل جهازي في مدى باي. معرّف الجهاز: $deviceId',
+    );
+    final url = Uri.parse('sms:?body=$message');
+
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        showMessage(context, 'تعذر فتح تطبيق الرسائل.');
+      }
+    } catch (_) {
+      if (mounted) showMessage(context, 'تعذر فتح تطبيق الرسائل.');
     }
+  }
+
+  Future<void> _signOut() async {
+    await supabase.auth.signOut();
   }
 
   @override
   Widget build(BuildContext context) {
     if (checking) {
       return const Scaffold(
+        backgroundColor: navy,
         body: Center(
-          child: CircularProgressIndicator(color: green),
+          child: CircularProgressIndicator(color: lightGold),
         ),
       );
     }
@@ -246,7 +312,11 @@ class _DeviceCheckGateState extends State<DeviceCheckGate> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.phonelink_lock_rounded, size: 64, color: lightGold),
+                        const Icon(
+                          Icons.phonelink_lock_rounded,
+                          size: 64,
+                          color: lightGold,
+                        ),
                         const SizedBox(height: 16),
                         const Text(
                           'تفعيل الجهاز مطلوب',
@@ -257,22 +327,33 @@ class _DeviceCheckGateState extends State<DeviceCheckGate> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                        const Text(
-                          'للدخول إلى حسابك من هذا الجهاز، يرجى التواصل عبر الروابط أدناه وإرسال معرّف الجهاز للأدمن:',
+                        Text(
+                          checkError ??
+                              'للدخول إلى حسابك من هذا الجهاز، أرسل معرّف الجهاز إلى الإدارة لاعتماده.',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         Container(
+                          width: double.infinity,
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: navy,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: gold.withOpacity(0.2)),
+                            border: Border.all(
+                              color: gold.withOpacity(0.2),
+                            ),
                           ),
                           child: SelectableText(
-                            deviceId,
-                            style: const TextStyle(color: lightGold, fontFamily: 'monospace', fontSize: 13),
+                            deviceId.isEmpty ? 'جارٍ تجهيز المعرّف...' : deviceId,
+                            style: const TextStyle(
+                              color: lightGold,
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                            ),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -280,34 +361,54 @@ class _DeviceCheckGateState extends State<DeviceCheckGate> {
                         FilledButton.icon(
                           onPressed: launchWhatsApp,
                           icon: const Icon(Icons.chat, color: Colors.white),
-                          label: const Text('التفعيل عبر واتساب', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          label: const Text(
+                            'التفعيل عبر واتساب',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF25D366),
                             minimumSize: const Size.fromHeight(50),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           onPressed: launchSMS,
                           icon: const Icon(Icons.sms, color: lightGold),
-                          label: const Text('التفعيل عبر رسائل SMS', style: TextStyle(color: lightGold, fontWeight: FontWeight.bold)),
+                          label: const Text(
+                            'التفعيل عبر رسائل SMS',
+                            style: TextStyle(
+                              color: lightGold,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           style: OutlinedButton.styleFrom(
                             minimumSize: const Size.fromHeight(50),
                             side: BorderSide(color: gold.withOpacity(0.5)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 12),
                         TextButton(
                           onPressed: _checkDeviceAuthorization,
-                          child: const Text('إعادة فحص حالة التفعيل', style: TextStyle(color: lightGold)),
+                          child: const Text(
+                            'إعادة فحص حالة التفعيل',
+                            style: TextStyle(color: lightGold),
+                          ),
                         ),
                         TextButton(
-                          onPressed: () async {
-                            await supabase.auth.signOut();
-                          },
-                          child: const Text('تسجيل الخروج', style: TextStyle(color: Colors.redAccent)),
+                          onPressed: _signOut,
+                          child: const Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(color: Colors.redAccent),
+                          ),
                         ),
                       ],
                     ),
@@ -327,6 +428,7 @@ class _DeviceCheckGateState extends State<DeviceCheckGate> {
 // --------------------------------------------------
 // صفحة تسجيل الدخول وإنشاء الحساب
 // --------------------------------------------------
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -386,8 +488,14 @@ class _LoginPageState extends State<LoginPage> {
       final email = emailController.text.trim();
       final fullPhone = '$selectedCountryCode$phoneNum';
 
-      if (fullName.isEmpty || email.isEmpty || phoneNum.isEmpty || pass.length < 6) {
-        showMessage(context, 'الرجاء إدخال الاسم، البريد، رقم الهاتف، وكلمة مرور من 6 أحرف على الأقل');
+      if (fullName.isEmpty ||
+          email.isEmpty ||
+          phoneNum.isEmpty ||
+          pass.length < 6) {
+        showMessage(
+          context,
+          'الرجاء إدخال الاسم والبريد ورقم الهاتف وكلمة مرور من 6 أحرف على الأقل.',
+        );
         return;
       }
 
@@ -409,12 +517,14 @@ class _LoginPageState extends State<LoginPage> {
             'full_name': fullName,
             'phone': fullPhone,
             'status': 'ACTIVE',
-            'device_status': 'PENDING',
           });
         }
 
         if (!mounted) return;
-        showMessage(context, 'تم إرسال كود التحقق إلى بريدك الإلكتروني. تفقد صندوق الوارد.');
+        showMessage(
+          context,
+          'تم إرسال طلب التسجيل. تفقد بريدك الإلكتروني لإكمال التحقق.',
+        );
       } on AuthException catch (e) {
         showMessage(context, 'تعذر إكمال التسجيل: ${e.message}');
       } catch (e) {
@@ -424,8 +534,9 @@ class _LoginPageState extends State<LoginPage> {
       }
     } else {
       final loginValue = loginController.text.trim();
+
       if (loginValue.isEmpty || pass.isEmpty) {
-        showMessage(context, 'أدخل البريد الإلكتروني وكلمة المرور');
+        showMessage(context, 'أدخل البريد الإلكتروني وكلمة المرور.');
         return;
       }
 
@@ -436,6 +547,7 @@ class _LoginPageState extends State<LoginPage> {
           email: loginValue,
           password: pass,
         );
+
         if (!mounted) return;
         showMessage(context, 'تم تسجيل الدخول بنجاح.');
       } on AuthException catch (e) {
@@ -448,7 +560,11 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  InputDecoration fieldDecoration({required String label, required IconData icon, Widget? suffix}) {
+  InputDecoration fieldDecoration({
+    required String label,
+    required IconData icon,
+    Widget? suffix,
+  }) {
     return InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: mutedGold),
@@ -456,16 +572,31 @@ class _LoginPageState extends State<LoginPage> {
       suffixIcon: suffix,
       filled: true,
       fillColor: cardDark,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
-      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: gold.withOpacity(0.35))),
-      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: lightGold, width: 1.8)),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: gold.withOpacity(0.35)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: lightGold, width: 1.8),
+      ),
     );
   }
 
   Future<void> launchDeveloperWhatsApp() async {
     final url = Uri.parse(developerWhatsAppUrl);
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
+    try {
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else if (mounted) {
+        showMessage(context, 'تعذر فتح واتساب.');
+      }
+    } catch (_) {
+      if (mounted) showMessage(context, 'تعذر فتح واتساب.');
     }
   }
 
@@ -474,7 +605,11 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
-          gradient: LinearGradient(colors: [navy, Color(0xFF0A1525), navyLight], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+          gradient: LinearGradient(
+            colors: [navy, Color(0xFF0A1525), navyLight],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
         ),
         child: SafeArea(
           child: Center(
@@ -489,15 +624,39 @@ class _LoginPageState extends State<LoginPage> {
                       height: 112,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: const LinearGradient(colors: [lightGold, gold]),
-                        boxShadow: [BoxShadow(color: gold.withOpacity(0.24), blurRadius: 30, spreadRadius: 2)],
+                        gradient: const LinearGradient(
+                          colors: [lightGold, gold],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: gold.withOpacity(0.24),
+                            blurRadius: 30,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                      child: const Icon(Icons.account_balance_wallet_rounded, size: 58, color: navy),
+                      child: const Icon(
+                        Icons.account_balance_wallet_rounded,
+                        size: 58,
+                        color: navy,
+                      ),
                     ),
                     const SizedBox(height: 22),
-                    const Text('وكالة مدى باي', textAlign: TextAlign.center, style: TextStyle(fontSize: 34, fontWeight: FontWeight.w900, color: lightGold)),
+                    const Text(
+                      'وكالة مدى باي',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: lightGold,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    const Text('لخدمات الدفع الرقمية الحديثة', textAlign: TextAlign.center, style: TextStyle(fontSize: 18, color: gold)),
+                    const Text(
+                      'لخدمات الدفع الرقمية الحديثة',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 18, color: gold),
+                    ),
                     const SizedBox(height: 32),
                     Container(
                       padding: const EdgeInsets.all(24),
@@ -509,35 +668,75 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(createAccount ? 'إنشاء حساب جديد' : 'تسجيل الدخول', textAlign: TextAlign.center, style: const TextStyle(color: lightGold, fontSize: 24, fontWeight: FontWeight.w800)),
+                          Text(
+                            createAccount ? 'إنشاء حساب جديد' : 'تسجيل الدخول',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: lightGold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                           const SizedBox(height: 26),
                           if (createAccount) ...[
-                            TextField(controller: fullNameController, style: const TextStyle(color: Colors.white), decoration: fieldDecoration(label: 'الاسم الكامل', icon: Icons.person_outline_rounded)),
+                            TextField(
+                              controller: fullNameController,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: fieldDecoration(
+                                label: 'الاسم الكامل',
+                                icon: Icons.person_outline_rounded,
+                              ),
+                            ),
                             const SizedBox(height: 16),
-                            TextField(controller: emailController, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white), decoration: fieldDecoration(label: 'البريد الإلكتروني (لتلقي كود التحقق)', icon: Icons.email_outlined)),
+                            TextField(
+                              controller: emailController,
+                              keyboardType: TextInputType.emailAddress,
+                              textDirection: TextDirection.ltr,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: fieldDecoration(
+                                label: 'البريد الإلكتروني لتلقي كود التحقق',
+                                icon: Icons.email_outlined,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: cardDark,
                                     borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(color: gold.withOpacity(0.35)),
+                                    border: Border.all(
+                                      color: gold.withOpacity(0.35),
+                                    ),
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
                                       value: selectedCountryCode,
                                       dropdownColor: cardDark,
-                                      style: const TextStyle(color: lightGold, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                        color: lightGold,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                       items: countryCodes.map((c) {
                                         return DropdownMenuItem(
                                           value: c['code'],
-                                          child: Text('${c['name']} (${c['code']})', style: const TextStyle(color: Colors.white)),
+                                          child: Text(
+                                            '${c['name']} (${c['code']})',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                            ),
+                                          ),
                                         );
                                       }).toList(),
                                       onChanged: (val) {
-                                        if (val != null) setState(() => selectedCountryCode = val);
+                                        if (val != null) {
+                                          setState(
+                                            () => selectedCountryCode = val,
+                                          );
+                                        }
                                       },
                                     ),
                                   ),
@@ -549,7 +748,10 @@ class _LoginPageState extends State<LoginPage> {
                                     keyboardType: TextInputType.phone,
                                     textDirection: TextDirection.ltr,
                                     style: const TextStyle(color: Colors.white),
-                                    decoration: fieldDecoration(label: 'رقم الهاتف الأساسي', icon: Icons.phone_android_rounded),
+                                    decoration: fieldDecoration(
+                                      label: 'رقم الهاتف الأساسي',
+                                      icon: Icons.phone_android_rounded,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -562,20 +764,33 @@ class _LoginPageState extends State<LoginPage> {
                                   activeColor: lightGold,
                                   checkColor: navy,
                                   onChanged: (val) {
-                                    setState(() => agreeToPrivacyPolicy = val ?? false);
+                                    setState(
+                                      () => agreeToPrivacyPolicy = val ?? false,
+                                    );
                                   },
                                 ),
                                 const Expanded(
                                   child: Text(
                                     'أوافق على سياسة الخصوصية وشروط الاستخدام',
-                                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(height: 10),
                           ] else ...[
-                            TextField(controller: loginController, textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white), decoration: fieldDecoration(label: 'البريد الإلكتروني', icon: Icons.email_outlined)),
+                            TextField(
+                              controller: loginController,
+                              textDirection: TextDirection.ltr,
+                              style: const TextStyle(color: Colors.white),
+                              decoration: fieldDecoration(
+                                label: 'البريد الإلكتروني',
+                                icon: Icons.email_outlined,
+                              ),
+                            ),
                             const SizedBox(height: 16),
                           ],
                           TextField(
@@ -587,8 +802,15 @@ class _LoginPageState extends State<LoginPage> {
                               label: 'كلمة المرور',
                               icon: Icons.lock_outline_rounded,
                               suffix: IconButton(
-                                onPressed: () => setState(() => obscurePassword = !obscurePassword),
-                                icon: Icon(obscurePassword ? Icons.visibility_off : Icons.visibility, color: lightGold),
+                                onPressed: () => setState(
+                                  () => obscurePassword = !obscurePassword,
+                                ),
+                                icon: Icon(
+                                  obscurePassword
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: lightGold,
+                                ),
                               ),
                             ),
                             onSubmitted: (_) => submit(),
@@ -596,28 +818,79 @@ class _LoginPageState extends State<LoginPage> {
                           const SizedBox(height: 24),
                           FilledButton.icon(
                             onPressed: loading ? null : submit,
-                            icon: loading ? const SizedBox(width: 19, height: 19, child: CircularProgressIndicator(strokeWidth: 2, color: navy)) : Icon(createAccount ? Icons.person_add_rounded : Icons.login_rounded, color: navy),
+                            icon: loading
+                                ? const SizedBox(
+                                    width: 19,
+                                    height: 19,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: navy,
+                                    ),
+                                  )
+                                : Icon(
+                                    createAccount
+                                        ? Icons.person_add_rounded
+                                        : Icons.login_rounded,
+                                    color: navy,
+                                  ),
                             label: Padding(
                               padding: const EdgeInsets.symmetric(vertical: 15),
-                              child: Text(loading ? 'جارٍ المعالجة...' : createAccount ? 'إنشاء الحساب' : 'تسجيل الدخول', style: const TextStyle(color: navy, fontWeight: FontWeight.w900, fontSize: 16)),
+                              child: Text(
+                                loading
+                                    ? 'جارٍ المعالجة...'
+                                    : createAccount
+                                        ? 'إنشاء الحساب'
+                                        : 'تسجيل الدخول',
+                                style: const TextStyle(
+                                  color: navy,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
+                                ),
+                              ),
                             ),
-                            style: FilledButton.styleFrom(backgroundColor: lightGold, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: lightGold,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
                           ),
                           const SizedBox(height: 16),
                           TextButton(
-                            onPressed: loading ? null : () => setState(() => createAccount = !createAccount),
-                            child: Text(createAccount ? 'لديك حساب بالفعل؟ تسجيل الدخول' : 'ليس لديك حساب؟ إنشاء حساب جديد', style: const TextStyle(color: lightGold, fontWeight: FontWeight.bold)),
+                            onPressed: loading
+                                ? null
+                                : () => setState(
+                                      () => createAccount = !createAccount,
+                                    ),
+                            child: Text(
+                              createAccount
+                                  ? 'لديك حساب بالفعل؟ تسجيل الدخول'
+                                  : 'ليس لديك حساب؟ إنشاء حساب جديد',
+                              style: const TextStyle(
+                                color: lightGold,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 30),
-                    const Divider(color: Colors.white24, thickness: 1, indent: 40, endIndent: 40),
+                    const Divider(
+                      color: Colors.white24,
+                      thickness: 1,
+                      indent: 40,
+                      endIndent: 40,
+                    ),
                     const SizedBox(height: 10),
                     const Text(
                       'جميع الحقوق محفوظة لوكالة مدى باي لخدمات الدفع الرقمية الحديثة',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: mutedGold, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        color: mutedGold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     const Text(
@@ -629,7 +902,10 @@ class _LoginPageState extends State<LoginPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Text('للإتصال بنا: ', style: TextStyle(color: mutedGold, fontSize: 12)),
+                        const Text(
+                          'للاتصال بنا: ',
+                          style: TextStyle(color: mutedGold, fontSize: 12),
+                        ),
                         InkWell(
                           onTap: launchDeveloperWhatsApp,
                           child: Container(
@@ -637,9 +913,15 @@ class _LoginPageState extends State<LoginPage> {
                             decoration: BoxDecoration(
                               color: const Color(0xFF25D366).withOpacity(0.2),
                               shape: BoxShape.circle,
-                              border: Border.all(color: const Color(0xFF25D366)),
+                              border: Border.all(
+                                color: const Color(0xFF25D366),
+                              ),
                             ),
-                            child: const Icon(Icons.chat, color: Color(0xFF25D366), size: 20),
+                            child: const Icon(
+                              Icons.chat,
+                              color: Color(0xFF25D366),
+                              size: 20,
+                            ),
                           ),
                         ),
                       ],
@@ -659,6 +941,7 @@ class _LoginPageState extends State<LoginPage> {
 // --------------------------------------------------
 // الصفحة الرئيسية للعميل
 // --------------------------------------------------
+
 class CustomerHomePage extends StatefulWidget {
   const CustomerHomePage({super.key});
 
@@ -679,13 +962,29 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   Future<void> loadData() async {
-    if (mounted) setState(() { loading = true; error = null; });
+    if (mounted) {
+      setState(() {
+        loading = true;
+        error = null;
+      });
+    }
+
     try {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception('انتهت جلسة الدخول.');
 
-      final profileData = await supabase.from('profiles').select().eq('id', user.id).maybeSingle();
-      final transactionData = await supabase.from('transactions').select().eq('user_id', user.id).order('created_at', ascending: false).limit(20);
+      final profileData = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      final transactionData = await supabase
+          .from('transactions')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(20);
 
       if (!mounted) return;
       setState(() {
@@ -695,29 +994,38 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() { error = e.toString(); loading = false; });
+      setState(() {
+        error = e.toString();
+        loading = false;
+      });
     }
   }
 
   void checkVerificationAndProceed(VoidCallback onVerifiedAction) {
-    final isVerified = profile?['is_verified'] == true || profile?['kyc_status']?.toString().toUpperCase() == 'APPROVED';
-    
+    final isVerified = profile?['is_verified'] == true ||
+        profile?['kyc_status']?.toString().toUpperCase() == 'APPROVED';
+
     if (isVerified) {
       onVerifiedAction();
     } else {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('تنويه هام', style: TextStyle(fontWeight: FontWeight.bold, color: deepGreen)),
-          content: const Text('عزيزي العميل، الرجاء توثيق حسابك للاستمتاع بمزايا تطبيق وكالة مدى باي الحصرية. اختر زر التوثيق أدناه للمتابعة.'),
+        builder: (dialogContext) => AlertDialog(
+          title: const Text(
+            'تنويه هام',
+            style: TextStyle(fontWeight: FontWeight.bold, color: deepGreen),
+          ),
+          content: const Text(
+            'عزيزي العميل، الرجاء توثيق حسابك للاستمتاع بمزايا تطبيق وكالة مدى باي الحصرية. اختر زر التوثيق أدناه للمتابعة.',
+          ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('لاحقاً'),
             ),
             FilledButton(
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
                 showKycDialog();
               },
               style: FilledButton.styleFrom(backgroundColor: green),
@@ -730,7 +1038,9 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   }
 
   void showKycDialog() {
-    final nameController = TextEditingController(text: profile?['full_name'] ?? '');
+    final nameController = TextEditingController(
+      text: profile?['full_name']?.toString() ?? '',
+    );
     final docNumberController = TextEditingController();
     String docType = 'بطاقة شخصية';
     DateTime? birthDate;
@@ -738,11 +1048,14 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
 
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
+      builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: const Text('توثيق المحفظة', style: TextStyle(fontWeight: FontWeight.bold, color: deepGreen)),
+            title: const Text(
+              'توثيق المحفظة',
+              style: TextStyle(fontWeight: FontWeight.bold, color: deepGreen),
+            ),
             content: SizedBox(
               width: 500,
               child: SingleChildScrollView(
@@ -754,53 +1067,103 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                       style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     const SizedBox(height: 16),
-                    TextField(controller: nameController, decoration: const InputDecoration(labelText: 'الاسم الكامل')),
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'الاسم الكامل',
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<String>(
                       value: docType,
-                      decoration: const InputDecoration(labelText: 'نوع الوثيقة'),
+                      decoration: const InputDecoration(
+                        labelText: 'نوع الوثيقة',
+                      ),
                       items: const [
-                        DropdownMenuItem(value: 'بطاقة شخصية', child: Text('بطاقة شخصية')),
-                        DropdownMenuItem(value: 'جواز سفر', child: Text('جواز سفر')),
+                        DropdownMenuItem(
+                          value: 'بطاقة شخصية',
+                          child: Text('بطاقة شخصية'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'جواز سفر',
+                          child: Text('جواز سفر'),
+                        ),
                       ],
-                      onChanged: (val) => setDialogState(() => docType = val!),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() => docType = val);
+                        }
+                      },
                     ),
                     const SizedBox(height: 12),
-                    TextField(controller: docNumberController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'رقم الوثيقة')),
+                    TextField(
+                      controller: docNumberController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'رقم الوثيقة',
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     TextField(
                       readOnly: true,
                       decoration: InputDecoration(
-                        labelText: birthDate == null ? 'تاريخ الميلاد' : birthDate.toString().split(' ')[0],
+                        labelText: birthDate == null
+                            ? 'تاريخ الميلاد'
+                            : birthDate!.toString().split(' ')[0],
                         prefixIcon: const Icon(Icons.calendar_today),
                       ),
                       onTap: () async {
-                        final picked = await showDatePicker(context: context, initialDate: DateTime(1995), firstDate: DateTime(1940), lastDate: DateTime.now());
-                        if (picked != null) setDialogState(() => birthDate = picked);
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime(1995),
+                          firstDate: DateTime(1940),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => birthDate = picked);
+                        }
                       },
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       readOnly: true,
                       decoration: InputDecoration(
-                        labelText: issueDate == null ? 'تاريخ إصدار الوثيقة' : issueDate.toString().split(' ')[0],
+                        labelText: issueDate == null
+                            ? 'تاريخ إصدار الوثيقة'
+                            : issueDate!.toString().split(' ')[0],
                         prefixIcon: const Icon(Icons.calendar_today),
                       ),
                       onTap: () async {
-                        final picked = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2010), lastDate: DateTime.now());
-                        if (picked != null) setDialogState(() => issueDate = picked);
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime(2010),
+                          lastDate: DateTime.now(),
+                        );
+                        if (picked != null) {
+                          setDialogState(() => issueDate = picked);
+                        }
                       },
                     ),
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Column(
                         children: [
-                          const Text('صورة وجه البطاقة', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            'صورة وجه البطاقة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 6),
                           OutlinedButton.icon(
-                            onPressed: () => showMessage(context, 'تم اختيار صورة وجه البطاقة بنجاح'),
+                            onPressed: () => showMessage(
+                              this.context,
+                              'ميزة اختيار الصور غير مفعلة في هذه النسخة.',
+                            ),
                             icon: const Icon(Icons.camera_alt),
                             label: const Text('تصوير الوثيقة'),
                           ),
@@ -810,13 +1173,22 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade300),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       child: Column(
                         children: [
-                          const Text('صورة ظهر البطاقة', style: TextStyle(fontWeight: FontWeight.bold)),
+                          const Text(
+                            'صورة ظهر البطاقة',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           const SizedBox(height: 6),
                           OutlinedButton.icon(
-                            onPressed: () => showMessage(context, 'تم اختيار صورة ظهر البطاقة بنجاح'),
+                            onPressed: () => showMessage(
+                              this.context,
+                              'ميزة اختيار الصور غير مفعلة في هذه النسخة.',
+                            ),
                             icon: const Icon(Icons.camera_alt),
                             label: const Text('تصوير الوثيقة'),
                           ),
@@ -828,28 +1200,57 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('إلغاء'),
+              ),
               FilledButton(
                 onPressed: () async {
                   final user = supabase.auth.currentUser;
                   if (user == null) return;
 
-                  await supabase.from('registration_requests').insert({
-                    'user_id': user.id,
-                    'full_name': nameController.text,
-                    'phone': profile?['phone'],
-                    'account_type': 'KYC_VERIFICATION',
-                    'status': 'PENDING',
-                  });
+                  if (nameController.text.trim().isEmpty ||
+                      docNumberController.text.trim().isEmpty ||
+                      birthDate == null ||
+                      issueDate == null) {
+                    showMessage(
+                      this.context,
+                      'أكمل الاسم ورقم الوثيقة وتاريخ الميلاد وتاريخ الإصدار.',
+                    );
+                    return;
+                  }
 
-                  await supabase.from('profiles').update({
-                    'kyc_status': 'PENDING',
-                  }).eq('id', user.id);
+                  try {
+                    await supabase.from('registration_requests').insert({
+                      'user_id': user.id,
+                      'full_name': nameController.text.trim(),
+                      'phone': profile?['phone'],
+                      'account_type': 'KYC_VERIFICATION',
+                      'status': 'PENDING',
+                    });
 
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                  showMessage(context, 'تم إرسال طلب التوثيق بنجاح إلى الإدارة للمراجعة.');
-                  loadData();
+                    await supabase
+                        .from('profiles')
+                        .update({'kyc_status': 'PENDING'})
+                        .eq('id', user.id);
+
+                    if (!dialogContext.mounted) return;
+                    Navigator.pop(dialogContext);
+
+                    showMessage(
+                      this.context,
+                      'تم إرسال طلب التوثيق بنجاح إلى الإدارة للمراجعة.',
+                    );
+                    await loadData();
+                  } catch (e) {
+                    showMessage(
+                      this.context,
+                      'تعذر إرسال طلب التوثيق. تحقق من الاتصال وصلاحيات الحساب.',
+                    );
+                  } finally {
+                    nameController.dispose();
+                    docNumberController.dispose();
+                  }
                 },
                 style: FilledButton.styleFrom(backgroundColor: green),
                 child: const Text('إرسال طلب التوثيق'),
@@ -865,67 +1266,173 @@ class _CustomerHomePageState extends State<CustomerHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('مدى باي - بوابة العميل', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'مدى باي - بوابة العميل',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         actions: [
-          IconButton(onPressed: loadData, icon: const Icon(Icons.refresh)),
-          IconButton(onPressed: () => supabase.auth.signOut(), icon: const Icon(Icons.logout)),
+          IconButton(
+            onPressed: loadData,
+            icon: const Icon(Icons.refresh),
+          ),
+          IconButton(
+            onPressed: () => supabase.auth.signOut(),
+            icon: const Icon(Icons.logout),
+          ),
         ],
       ),
       body: loading
           ? const Center(child: CircularProgressIndicator(color: green))
-          : RefreshIndicator(
-              onRefresh: loadData,
-              child: ListView(
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    child: ListTile(
-                      leading: const CircleAvatar(child: Icon(Icons.person, color: green)),
-                      title: Text(profile?['full_name'] ?? 'عميل مدى باي'),
-                      subtitle: Text('حالة التوثيق: ${profile?['kyc_status'] == 'APPROVED' ? 'موثق ✓' : 'قيد المراجعة / غير موثق'}'),
+          : error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 42,
+                          color: Colors.redAccent,
+                        ),
+                        const SizedBox(height: 12),
+                        const Text(
+                          'تعذر تحميل بيانات الحساب.',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          error!,
+                          textAlign: TextAlign.center,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: loadData,
+                          child: const Text('إعادة المحاولة'),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.account_balance_wallet, size: 32, color: gold),
-                      title: const Text('الرصيد المتاح'),
-                      subtitle: Text(profile?['balance']?.toString() ?? '0.00', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text('الخدمات السريعة', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: deepGreen)),
-                  const SizedBox(height: 10),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    mainAxisSpacing: 10,
-                    crossAxisSpacing: 10,
-                    childAspectRatio: 2.5,
+                )
+              : RefreshIndicator(
+                  onRefresh: loadData,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: () => checkVerificationAndProceed(() => showMessage(context, 'جاري تنفيذ خدمة شحن الرصيد...')),
-                        icon: const Icon(Icons.phone_android),
-                        label: const Text('شحن رصيد وباقات'),
+                      Card(
+                        child: ListTile(
+                          leading: const CircleAvatar(
+                            child: Icon(Icons.person, color: green),
+                          ),
+                          title: Text(
+                            profile?['full_name']?.toString() ??
+                                'عميل مدى باي',
+                          ),
+                          subtitle: Text(
+                            'حالة التوثيق: ${profile?['kyc_status']?.toString().toUpperCase() == 'APPROVED' ? 'موثق ✓' : 'غير موثق أو قيد المراجعة'}',
+                          ),
+                        ),
                       ),
-                      ElevatedButton.icon(
-                        onPressed: () => checkVerificationAndProceed(() => showMessage(context, 'جاري فتح تحويل الأموال...')),
-                        icon: const Icon(Icons.swap_horiz),
-                        label: const Text('تحويل أموال'),
+                      const SizedBox(height: 12),
+                      Card(
+                        child: ListTile(
+                          leading: const Icon(
+                            Icons.account_balance_wallet,
+                            size: 32,
+                            color: gold,
+                          ),
+                          title: const Text('الرصيد المتاح'),
+                          subtitle: Text(
+                            profile?['balance']?.toString() ?? '0.00',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                       ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'الخدمات السريعة',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: deepGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      GridView.count(
+                        crossAxisCount: 2,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        mainAxisSpacing: 10,
+                        crossAxisSpacing: 10,
+                        childAspectRatio: 2.5,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () => checkVerificationAndProceed(
+                              () => showMessage(
+                                context,
+                                'خدمة شحن الرصيد غير مربوطة بواجهة تنفيذ بعد.',
+                              ),
+                            ),
+                            icon: const Icon(Icons.phone_android),
+                            label: const Text('شحن رصيد وباقات'),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () => checkVerificationAndProceed(
+                              () => showMessage(
+                                context,
+                                'خدمة تحويل الأموال غير مربوطة بواجهة تنفيذ بعد.',
+                              ),
+                            ),
+                            icon: const Icon(Icons.swap_horiz),
+                            label: const Text('تحويل أموال'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'آخر العمليات',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: deepGreen,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (transactions.isEmpty)
+                        const Card(
+                          child: ListTile(
+                            title: Text('لا توجد عمليات مسجلة حالياً.'),
+                          ),
+                        )
+                      else
+                        ...transactions.map(
+                          (tx) => Card(
+                            child: ListTile(
+                              title: Text(
+                                'معاملة: ${tx['service_id'] ?? 'عام'}',
+                              ),
+                              subtitle: Text(
+                                'الحالة: ${tx['status'] ?? 'غير محددة'}',
+                              ),
+                            ),
+                          ),
+                        ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                  const Text('آخر العمليات', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: deepGreen)),
-                  const SizedBox(height: 8),
-                  if (transactions.isEmpty)
-                    const Card(child: ListTile(title: Text('لا توجد عمليات مسجلة حالياً.')))
-                  else
-                    ...transactions.map((tx) => Card(child: ListTile(title: Text('معاملة: ${tx['service_id'] ?? 'عام'}'), subtitle: Text('الحالة: ${tx['status']}'))),
-                ],
-              ),
-            ),
+                ),
     );
   }
 }
+
+ملف "customer_app/pubspec.yaml" — أضف الاعتماد التالي ضمن "dependencies" إذا لم يكن موجودًا:
+
+shared_preferences: ^2.5.3
+
+ثم نفّذ:
+
+flutter pub get
