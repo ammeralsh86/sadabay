@@ -1,10 +1,12 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'main.dart' show db, navy, cardDark, lightGold, gold;
+import 'package:url_launcher/url_launcher.dart';
+
+import 'main.dart' show navy, cardDark, lightGold;
 
 class UpdateChecker {
   static const String owner = "ammeralsh86";
@@ -96,7 +98,7 @@ class UpdateChecker {
     final res = await http.get(url);
     if (res.statusCode!= 200) return;
 
-    final data = jsonDecode(res.body);
+    final data = jsonDecode(res.body) as Map<String, dynamic>;
     final latestTag = (data['tag_name'] as String).replaceAll('v', '');
     final releaseNotes = data['body']?? 'يوجد تحديث جديد';
     final downloadUrl = data['html_url']??
@@ -117,7 +119,7 @@ class UpdateChecker {
         context,
         currentVersion,
         latestTag,
-        releaseNotes,
+        releaseNotes.toString(),
         apkUrl?? downloadUrl,
         false,
       );
@@ -144,7 +146,10 @@ class UpdateChecker {
   static void _showSnack(BuildContext context, String text) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(text, style: const TextStyle(color: navy)),
+        content: Text(
+          text,
+          style: const TextStyle(color: navy),
+        ),
         backgroundColor: lightGold,
       ),
     );
@@ -205,7 +210,10 @@ class UpdateChecker {
                     color: lightGold,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.system_update_rounded, color: navy),
+                  child: const Icon(
+                    Icons.system_update_rounded,
+                    color: navy,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -259,7 +267,9 @@ class UpdateChecker {
                   ),
                 ),
               FilledButton.icon(
-                style: FilledButton.styleFrom(backgroundColor: lightGold),
+                style: FilledButton.styleFrom(
+                  backgroundColor: lightGold,
+                ),
                 onPressed: () async {
                   final uri = Uri.parse(url);
                   if (await canLaunchUrl(uri)) {
@@ -269,7 +279,10 @@ class UpdateChecker {
                     );
                   }
                 },
-                icon: const Icon(Icons.download_rounded, color: navy),
+                icon: const Icon(
+                  Icons.download_rounded,
+                  color: navy,
+                ),
                 label: const Text(
                   'تحديث الان',
                   style: TextStyle(
