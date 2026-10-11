@@ -149,7 +149,11 @@ class _MadaPayState extends State<MadaPay> {
         TextButton(onPressed:()=>setState(()=>showRegister=true),child:const Text('ليس لديك حساب؟ إنشاء حساب جديد'))])),
       const SizedBox(height:20),const Text('تطوير / وكالة مدى باي للدفع الإلكتروني\nم / أبو معاوية الشبيبي',textAlign:TextAlign.center),
       const SizedBox(height:10),const Text('حساب تجريبي: 777777777 / 123456',style:TextStyle(color:Colors.grey,fontSize:12)),
-      TextButton(onPressed:()=>setState(()=>showWelcome=true),child:const Text('العودة إلى الترحيب')),
+      TextButton(onPressed: () {
+  setState(() {
+    showWelcome = false;
+    showRegister = true;
+  }),child:const Text('العودة إلى الترحيب')),
     ])))));
   }
   Widget registerPage() {
@@ -274,3 +278,72 @@ return MaterialApp(
     ),
   ),
 );
+  }
+}
+  }
+}
+class _WelcomeIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _WelcomeIcon(this.icon, this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 105,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            color: const Color(0xFF147D64),
+            size: 28,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickAction(this.icon, this.label, this.onTap);
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 10,
+          vertical: 6,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 26),
+            const SizedBox(height: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
