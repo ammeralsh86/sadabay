@@ -149,13 +149,15 @@ class _MadaPayState extends State<MadaPay> {
         TextButton(onPressed:()=>setState(()=>showRegister=true),child:const Text('ليس لديك حساب؟ إنشاء حساب جديد'))])),
       const SizedBox(height:20),const Text('تطوير / وكالة مدى باي للدفع الإلكتروني\nم / أبو معاوية الشبيبي',textAlign:TextAlign.center),
       const SizedBox(height:10),const Text('حساب تجريبي: 777777777 / 123456',style:TextStyle(color:Colors.grey,fontSize:12)),
-      TextButton(onPressed: () {
-  setState(() {
-    showWelcome = false;
-    showRegister = true;
-  }),child:const Text('العودة إلى الترحيب')),
-    ])))));
-  }
+      TextButton(
+  onPressed: () {
+    setState(() {
+      showWelcome = true;
+      showRegister = false;
+    });
+  },
+  child: const Text('العودة إلى الترحيب'),
+),
   Widget registerPage() {
     final id=TextEditingController(), pass=TextEditingController(), confirm=TextEditingController(), name=TextEditingController(), identity=TextEditingController();
     final districts=regions[province]?.keys.toList()??[];
