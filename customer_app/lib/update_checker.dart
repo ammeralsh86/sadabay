@@ -91,20 +91,50 @@ class UpdateChecker {
     }
   }
 
-  static bool _isNewer(String latest, String current) {
-    try {
-      final l = latest.split('.').map(int.parse).toList();
-      final c = current.split('.').map(int.parse).toList();
-      for (var i = 0; i < l.length; i++) {
-        if (i >= c.length) return true;
-        if (l[i] > c[i]) return true;
-        if (l[i] < c[i]) return false;
-      }
-      return false;
-    } catch (_) {
-      return latest != current;
+  
+  
+static bool _isNewer(String latest, String current) {
+  List<int>? parseVersion(String version) {
+    final normalized = version.trim().replaceFirst(
+      RegExp(r'^[vV]'),
+      '',
+    );
+
+    final parts = normalized.split('.');
+    if (parts.isEmpty) return null;
+
+    final result = <int>[];
+    for (final part in parts) {
+      final value = int.tryParse(part);
+      if (value == null || value < 0) return null;
+      result.add(value);
     }
+    return result;
   }
+
+  final latestParts = parseVersion(latest);
+  final currentParts = parseVersion(current);
+
+  if (latestParts == null || currentParts == null) {
+    return false;
+  }
+
+  final length = latestParts.length > currentParts.length
+      ? latestParts.length
+      : currentParts.length;
+
+  for (var i = 0; i < length; i++) {
+    final l = i < latestParts.length ? latestParts[i] : 0;
+    final c = i < currentParts.length ? currentParts[i] : 0;
+
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+
+  return false;
+}
+
+
 
   static void _showMaintenanceDialog(BuildContext context, String message) {
     showDialog(
@@ -205,8 +235,7 @@ class UpdateChecker {
                 icon: const Icon(Icons.download_rounded, color: _navy),
                 label: const Text(
                   'تحديث الآن',
-                  style: TextStyle(
-                    color: _navy,
+                  style: const TextStyle(color: Colors.white70),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
