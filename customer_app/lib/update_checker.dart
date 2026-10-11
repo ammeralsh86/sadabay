@@ -1,16 +1,15 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'main.dart' show navy, cardDark, lightGold;
-
 class UpdateChecker {
-  static const String owner = "ammeralsh86";
-  static const String repo = "sadabay";
+  static const Color _navy = Color(0xFF0A1931);
+  static const Color _cardDark = Color(0xFF1A2744);
+  static const Color _lightGold = Color(0xFFE8C765);
+
+  static const String owner = 'ammeralsh86';
+  static const String repo = 'sadabay';
 
   static Future<void> checkForUpdate(
     BuildContext context, {
@@ -20,111 +19,75 @@ class UpdateChecker {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
 
-      final supabase = Supabase.instance.client;
-      final settings = await supabase
-         .from('app_settings')
-         .select()
-         .eq('id', 1)
-         .maybeSingle();
+      final settings = await Supabase.instance.client
+          .from('app_settings')
+          .select()
+          .eq('id', 1)
+          .maybeSingle();
 
-      if (settings!= null && settings['latest_version']!= null) {
-        final latest = (settings['latest_version'] as String)
-           .replaceAll('v', '')
-           .trim();
-        final minRaw = settings['min_version'] as String?;
-        final minVersion = (minRaw?? latest).replaceAll('v', '').trim();
-        final apkUrl = (settings['apk_url'] as String?)??
-            'https://github.com/$owner/$repo/releases/latest';
-        final notes = (settings['update_notes'] as String?)??
-            'يوجد تحديث جديد يحسن الاداء';
-        final forceUpdate = (settings['update_force'] as bool?)?? false;
-        final maintenance = (settings['maintenance_mode'] as bool?)?? false;
+      if (settings == null) return;
 
-        if (maintenance) {
-          if (!context.mounted) return;
-          _showMaintenanceDialog(
-            context,
-            (settings['maintenance_message'] as String?)??
-                'التطبيق تحت الصيانة',
-          );
-          return;
-        }
+      final latest = (settings['latest_version'] as String?)
+          ?.replaceAll('v', '')
+          .trim();
 
-        if (_isNewer(latest, currentVersion)) {
-          if (!context.mounted) return;
-          final isForce = forceUpdate || _isNewer(minVersion, currentVersion);
-          _showUpdateDialog(
-            context,
-            currentVersion,
-            latest,
-            notes,
-            apkUrl,
-            isForce,
-          );
-          return;
-        } else {
-          if (showNoUpdateMessage && context.mounted) {
-            _showSnack(context, 'انت على احدث اصدار $currentVersion');
-          }
-          return;
-        }
-      }
+      if (latest == null) return;
 
-      await _checkFromGitHub(context, currentVersion, showNoUpdateMessage);
-    } catch (e) {
-      try {
-        final packageInfo = await PackageInfo.fromPlatform();
-        await _checkFromGitHub(
+      final minVersion = ((settings['min_version'] as String?) ?? latest)
+          .replaceAll('v', '')
+          .trim();
+
+      final apkUrl = (settings['apk_url'] as String?) ??
+          'https://github.com/$owner/$repo/releases/latest';
+
+      final notes = (settings['update_notes'] as String?) ??
+          'يوجد تحديث جديد يحسن الأداء';
+
+      final forceUpdate = (settings['update_force'] as bool?) ?? false;
+      final maintenance = (settings['maintenance_mode'] as bool?) ?? false;
+
+      if (maintenance) {
+        if (!context.mounted) return;
+        _showMaintenanceDialog(
           context,
-          packageInfo.version,
-          showNoUpdateMessage,
+          (settings['maintenance_message'] as String?) ??
+              'التطبيق تحت الصيانة حالياً',
         );
-      } catch (_) {
-        if (showNoUpdateMessage && context.mounted) {
-          _showSnack(context, 'لا يوجد اتصال للتحقق من التحديث');
-        }
+        return;
       }
-    }
-  }
 
-  static Future<void> _checkFromGitHub(
-    BuildContext context,
-    String currentVersion,
-    bool showNoUpdateMessage,
-  ) async {
-    final url = Uri.parse(
-      'https://api.github.com/repos/$owner/$repo/releases/latest',
-    );
-    final res = await http.get(url);
-    if (res.statusCode!= 200) return;
-
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
-    final latestTag = (data['tag_name'] as String).replaceAll('v', '');
-    final releaseNotes = data['body']?? 'يوجد تحديث جديد';
-    final downloadUrl = data['html_url']??
-        'https://github.com/$owner/$repo/releases/latest';
-
-    String? apkUrl;
-    if (data['assets']!= null && (data['assets'] as List).isNotEmpty) {
-      try {
-        final apkAsset = (data['assets'] as List).firstWhere(
-          (a) => (a['name'] as String).endsWith('.apk'),
+      if (_isNewer(latest, currentVersion)) {
+        if (!context.mounted) return;
+        final isForce = forceUpdate || _isNewer(minVersion, currentVersion);
+        _showUpdateDialog(
+          context,
+          currentVersion,
+          latest,
+          notes,
+          apkUrl,
+          isForce,
         );
-        apkUrl = apkAsset['browser_download_url'] as String?;
-      } catch (_) {}
-    }
+        return;
+      }
 
-    if (_isNewer(latestTag, currentVersion) && context.mounted) {
-      _showUpdateDialog(
-        context,
-        currentVersion,
-        latestTag,
-        releaseNotes.toString(),
-        apkUrl?? downloadUrl,
-        false,
-      );
-    } else if (showNoUpdateMessage && context.mounted) {
-      _showSnack(context, 'انت على احدث اصدار $currentVersion');
+      if (showNoUpdateMessage && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('أنت على أحدث إصدار ($currentVersion)'),
+            backgroundColor: _lightGold,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (_) {
+      if (showNoUpdateMessage && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لا يوجد اتصال للتحقق من التحديث'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
@@ -132,49 +95,34 @@ class UpdateChecker {
     try {
       final l = latest.split('.').map(int.parse).toList();
       final c = current.split('.').map(int.parse).toList();
-      for (int i = 0; i < l.length; i++) {
+      for (var i = 0; i < l.length; i++) {
         if (i >= c.length) return true;
         if (l[i] > c[i]) return true;
         if (l[i] < c[i]) return false;
       }
       return false;
     } catch (_) {
-      return latest!= current;
+      return latest != current;
     }
   }
 
-  static void _showSnack(BuildContext context, String text) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          text,
-          style: const TextStyle(color: navy),
-        ),
-        backgroundColor: lightGold,
-      ),
-    );
-  }
-
-  static void _showMaintenanceDialog(BuildContext context, String msg) {
+  static void _showMaintenanceDialog(BuildContext context, String message) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          backgroundColor: cardDark,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          backgroundColor: _cardDark,
           title: const Text(
             'وضع الصيانة',
             style: TextStyle(
-              color: lightGold,
+              color: _lightGold,
               fontWeight: FontWeight.bold,
             ),
           ),
           content: Text(
-            msg,
+            message,
             style: const TextStyle(color: Colors.white70),
           ),
         ),
@@ -192,41 +140,19 @@ class UpdateChecker {
   ) {
     showDialog(
       context: context,
-      barrierDismissible:!force,
+      barrierDismissible: !force,
       builder: (ctx) => PopScope(
-        canPop:!force,
+        canPop: !force,
         child: Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            backgroundColor: cardDark,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            title: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: lightGold,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(
-                    Icons.system_update_rounded,
-                    color: navy,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    force? 'تحديث اجباري!' : 'تحديث جديد متاح!',
-                    style: const TextStyle(
-                      color: lightGold,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ],
+            backgroundColor: _cardDark,
+            title: Text(
+              force ? 'تحديث إجباري!' : 'تحديث جديد متاح!',
+              style: const TextStyle(
+                color: _lightGold,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -244,15 +170,12 @@ class UpdateChecker {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: navy,
+                    color: _navy,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     notes,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
+                    style: constTextStyle(color: Colors.white70),
                   ),
                 ),
               ],
@@ -262,13 +185,13 @@ class UpdateChecker {
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
                   child: const Text(
-                    'لاحقا',
-                    style: TextStyle(color: Colors.white54),
+                    'لاحقاً',
+                    style: TextStyle(color: Colors.white60),
                   ),
                 ),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: lightGold,
+                  backgroundColor: _lightGold,
                 ),
                 onPressed: () async {
                   final uri = Uri.parse(url);
@@ -279,14 +202,11 @@ class UpdateChecker {
                     );
                   }
                 },
-                icon: const Icon(
-                  Icons.download_rounded,
-                  color: navy,
-                ),
+                icon: const Icon(Icons.download_rounded, color: _navy),
                 label: const Text(
-                  'تحديث الان',
+                  'تحديث الآن',
                   style: TextStyle(
-                    color: navy,
+                    color: _navy,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
