@@ -1,11 +1,32 @@
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'update_checker.dart';
 
-const green = Color(0xFF0D5C4A);
-const deepGreen = Color(0xFF073B32);
-const gold = Color(0xFFC89B3C);
-const bg = Color(0xFFF3F6F5);
+// ========= نفس ثيم تطبيق العميل 100% =========
+const navy = Color(0xFF0A1931);
+const navyLight = Color(0xFF121E3B);
+const cardDark = Color(0xFF1A2744);
+const gold = Color(0xFFD4AF37);
+const lightGold = Color(0xFFE8C765);
+const mutedGold = Color(0xFFB89A5A);
+const bg = Color(0xFF0A1931);
+
+// للتوافق مع الكود القديم
+const green = navy;
+const deepGreen = navyLight;
+
+const LinearGradient goldGradient = LinearGradient(
+  colors: [Color(0xFFE8C765), Color(0xFFD4AF37)],
+  begin: Alignment.topLeft,
+  end: Alignment.bottomRight,
+);
+
+const LinearGradient backgroundGradient = LinearGradient(
+  colors: [Color(0xFF0A1525), Color(0xFF0A1931), Color(0xFF121E3B)],
+  begin: Alignment.topCenter,
+  end: Alignment.bottomCenter,
+);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,17 +35,7 @@ Future<void> main() async {
   const key = String.fromEnvironment('SUPABASE_KEY');
 
   if (url.isEmpty || key.isEmpty) {
-    runApp(const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text(
-            'إعدادات Supabase غير موجودة.\n'
-            'أضف SUPABASE_URL و SUPABASE_KEY إلى إعدادات البناء.',
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ),
-    ));
+    runApp(const ConfigErrorApp());
     return;
   }
 
@@ -33,6 +44,26 @@ Future<void> main() async {
 }
 
 final db = Supabase.instance.client;
+
+class ConfigErrorApp extends StatelessWidget {
+  const ConfigErrorApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        backgroundColor: navy,
+        body: Center(
+          child: Text(
+            'إعدادات Supabase غير موجودة',
+            style: GoogleFonts.cairo(color: lightGold),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class MadaPayAdmin extends StatelessWidget {
   const MadaPayAdmin({super.key});
@@ -44,37 +75,59 @@ class MadaPayAdmin extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        fontFamily: 'Arial',
-        scaffoldBackgroundColor: bg,
-        colorScheme: ColorScheme.fromSeed(seedColor: green),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: deepGreen,
+        scaffoldBackgroundColor: navy,
+        textTheme: GoogleFonts.cairoTextTheme(
+          ThemeData.dark().textTheme,
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: lightGold,
+          secondary: gold,
+          background: navy,
+          surface: cardDark,
+        ),
+        appBarTheme: AppBarTheme(
+          backgroundColor: navy,
+          foregroundColor: lightGold,
           elevation: 0,
-          centerTitle: false,
+          centerTitle: true,
+          titleTextStyle: GoogleFonts.cairo(
+            color: lightGold,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.white,
+          fillColor: cardDark,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
         ),
+        cardTheme: CardThemeData(
+          color: cardDark,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+        ),
       ),
-      home: const LoginPage(),
+      home: const Directionality(
+        textDirection: TextDirection.rtl,
+        child: LoginPage(),
+      ),
     );
   }
 }
 
-// ------------------------------------------------------------
-// أدوات مساعدة
-// ------------------------------------------------------------
-
 void message(BuildContext context, String text) {
   ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(
-      content: Text(text, textDirection: TextDirection.rtl),
+      content: Text(
+        text,
+        textDirection: TextDirection.rtl,
+        style: GoogleFonts.cairo(color: navy),
+      ),
+      backgroundColor: lightGold,
       behavior: SnackBarBehavior.floating,
     ),
   );
@@ -107,11 +160,7 @@ String arabicRole(String role) {
   }
 }
 
-// ------------------------------------------------------------
-// تسجيل الدخول والتحقق من الحساب والدور
-// ------------------------------------------------------------
-
-
+// ================= تسجيل الدخول =================
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -122,14 +171,6 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final loginController = TextEditingController();
   final passwordController = TextEditingController();
-
-  static const navy = Color(0xFF0A1931);
-  static const navyLight = Color(0xFF121E3B);
-  static const cardDark = Color(0xFF1A2744);
-  static const gold = Color(0xFFD4AF37);
-  static const lightGold = Color(0xFFE8C765);
-  static const mutedGold = Color(0xFFB89A5A);
-
   bool loading = false;
   bool obscure = true;
 
@@ -145,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
     final password = passwordController.text;
 
     if (loginValue.isEmpty || password.isEmpty) {
-      message(context, 'أدخل اسم المستخدم أو البريد الإلكتروني أو الهاتف وكلمة المرور');
+      message(context, 'أدخل البريد وكلمة المرور');
       return;
     }
 
@@ -160,8 +201,6 @@ class _LoginPageState extends State<LoginPage> {
           password: password,
         );
       } else {
-        // تسجيل الدخول برقم الهاتف أو باسم المستخدم.
-        // Supabase لا يدعم اسم المستخدم مباشرة؛ سنحاول الهاتف أولاً.
         response = await db.auth.signInWithPassword(
           phone: loginValue,
           password: password,
@@ -169,34 +208,34 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final user = response.user;
-      if (user == null) throw Exception('تعذر التحقق من الحساب');
+      if (user == null) throw Exception('تعذر التحقق');
 
       final profile = await db
-          .from('profiles')
-          .select('id, full_name, status')
-          .eq('id', user.id)
-          .maybeSingle();
+         .from('profiles')
+         .select('id, full_name, status')
+         .eq('id', user.id)
+         .maybeSingle();
 
       if (profile == null) {
         await db.auth.signOut();
-        throw Exception('لا يوجد ملف مستخدم مرتبط بهذا الحساب');
+        throw Exception('لا يوجد ملف مستخدم');
       }
 
-      if (profile['status']?.toString().toUpperCase() != 'ACTIVE') {
+      if (profile['status']?.toString().toUpperCase()!= 'ACTIVE') {
         await db.auth.signOut();
         throw Exception('الحساب غير مفعل');
       }
 
       final rows = await db
-          .from('user_roles')
-          .select('role_id, roles(name)')
-          .eq('user_id', user.id);
+         .from('user_roles')
+         .select('role_id, roles(name)')
+         .eq('user_id', user.id);
 
       final roleNames = <String>[];
 
       for (final row in rows) {
         final relation = row['roles'];
-        if (relation is Map && relation['name'] != null) {
+        if (relation is Map && relation['name']!= null) {
           roleNames.add(relation['name'].toString().toUpperCase());
         }
       }
@@ -214,13 +253,13 @@ class _LoginPageState extends State<LoginPage> {
 
       if (matched.isEmpty) {
         await db.auth.signOut();
-        throw Exception('هذا الحساب لا يملك دورًا إداريًا');
+        throw Exception('ليس لديك دور إداري');
       }
 
       final role = matched.contains('OWNER')
-          ? 'OWNER'
+         ? 'OWNER'
           : matched.contains('ADMIN')
-              ? 'ADMIN'
+             ? 'ADMIN'
               : matched.first;
 
       if (!mounted) return;
@@ -252,7 +291,7 @@ class _LoginPageState extends State<LoginPage> {
   }) {
     return InputDecoration(
       labelText: label,
-      labelStyle: const TextStyle(color: mutedGold),
+      labelStyle: GoogleFonts.cairo(color: mutedGold),
       prefixIcon: Icon(icon, color: lightGold),
       suffixIcon: suffix,
       filled: true,
@@ -274,252 +313,151 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        body: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [navy, Color(0xFF0A1525), navyLight],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(22),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 460),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 12),
-
-                      // الشعار الذهبي
-                      Container(
-                        width: 112,
-                        height: 112,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: const LinearGradient(
-                            colors: [lightGold, gold],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(gradient: backgroundGradient),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(22),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 460),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 112,
+                      height: 112,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: goldGradient,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Color(0x3DD4AF37),
+                            blurRadius: 30,
+                            spreadRadius: 2,
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: gold.withOpacity(0.24),
-                              blurRadius: 30,
-                              spreadRadius: 2,
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.admin_panel_settings_rounded,
+                        size: 58,
+                        color: navy,
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    Text(
+                      'وكالة مدى باي',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.cairo(
+                        fontSize: 34,
+                        fontWeight: FontWeight.w900,
+                        color: lightGold,
+                      ),
+                    ),
+                    Text(
+                      'لوحة تحكم الإدارة',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.cairo(
+                        fontSize: 14,
+                        color: mutedGold,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF101D35),
+                        borderRadius: BorderRadius.circular(26),
+                        border: Border.all(
+                          color: gold.withOpacity(0.45),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'تسجيل دخول الإدارة',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.cairo(
+                              color: lightGold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w800,
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          size: 58,
-                          color: navy,
-                        ),
-                      ),
-
-                      const SizedBox(height: 22),
-
-                      const Text(
-                        'وكالة مدى باي',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 34,
-                          fontWeight: FontWeight.w900,
-                          color: lightGold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-
-                      const SizedBox(height: 8),
-
-                      const Text(
-                        'لخدمات الدفع الرقمية الحديثة',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          color: gold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 6),
-
-                      const Text(
-                        'وشحن الرصيد والتطبيقات والألعاب',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: mutedGold,
-                        ),
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF101D35),
-                          borderRadius: BorderRadius.circular(26),
-                          border: Border.all(
-                            color: gold.withOpacity(0.45),
                           ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.20),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
+                          const SizedBox(height: 26),
+                          TextField(
+                            controller: loginController,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: fieldDecoration(
+                              label: 'البريد أو الهاتف',
+                              icon: Icons.person_outline_rounded,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            const Text(
-                              'تسجيل دخول الإدارة',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: lightGold,
-                                fontSize: 24,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-
-                            const SizedBox(height: 8),
-
-                            const Text(
-                              'مرحبًا بك في لوحة التحكم الخاصة بوكالة مدى باي',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: mutedGold,
-                                fontSize: 13,
-                              ),
-                            ),
-
-                            const SizedBox(height: 26),
-
-                            TextField(
-                              controller: loginController,
-                              textDirection: TextDirection.ltr,
-                              keyboardType: TextInputType.text,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: fieldDecoration(
-                                label: 'البريد الإلكتروني أو رقم الهاتف',
-                                icon: Icons.person_outline_rounded,
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            TextField(
-                              controller: passwordController,
-                              obscureText: obscure,
-                              textDirection: TextDirection.ltr,
-                              style: const TextStyle(color: Colors.white),
-                              decoration: fieldDecoration(
-                                label: 'كلمة المرور',
-                                icon: Icons.lock_outline_rounded,
-                                suffix: IconButton(
-                                  onPressed: () {
-                                    setState(() => obscure = !obscure);
-                                  },
-                                  icon: Icon(
-                                    obscure
-                                        ? Icons.visibility_off
-                                        : Icons.visibility,
-                                    color: lightGold,
-                                  ),
+                          ),
+                          const SizedBox(height: 16),
+                          TextField(
+                            controller: passwordController,
+                            obscureText: obscure,
+                            textDirection: TextDirection.ltr,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: fieldDecoration(
+                              label: 'كلمة المرور',
+                              icon: Icons.lock_outline_rounded,
+                              suffix: IconButton(
+                                onPressed: () =>
+                                    setState(() => obscure =!obscure),
+                                icon: Icon(
+                                  obscure
+                                     ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: lightGold,
                                 ),
                               ),
-                              onSubmitted: (_) => login(),
                             ),
-
-                            const SizedBox(height: 24),
-
-                            Container(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [lightGold, gold],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: gold.withOpacity(0.20),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 5),
-                                  ),
-                                ],
-                              ),
-                              child: FilledButton.icon(
-                                onPressed: loading ? null : login,
-                                icon: loading
-                                    ? const SizedBox(
-                                        width: 19,
-                                        height: 19,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          color: navy,
-                                        ),
-                                      )
-                                    : const Icon(
-                                        Icons.login_rounded,
-                                        color: navy,
-                                      ),
-                                label: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 15,
-                                  ),
-                                  child: Text(
-                                    loading
-                                        ? 'جارٍ التحقق من الحساب...'
-                                        : 'تسجيل الدخول',
-                                    style: const TextStyle(
+                            onSubmitted: (_) => login(),
+                          ),
+                          const SizedBox(height: 24),
+                          FilledButton.icon(
+                            onPressed: loading? null : login,
+                            icon: loading
+                               ? const SizedBox(
+                                    width: 19,
+                                    height: 19,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
                                       color: navy,
-                                      fontWeight: FontWeight.w900,
-                                      fontSize: 16,
                                     ),
+                                  )
+                                : const Icon(
+                                    Icons.login_rounded,
+                                    color: navy,
                                   ),
-                                ),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: Colors.transparent,
-                                  disabledBackgroundColor:
-                                      Colors.white24,
-                                  shadowColor: Colors.transparent,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
+                            label: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 15,
+                              ),
+                              child: Text(
+                                loading
+                                   ? 'جارٍ التحقق...'
+                                    : 'تسجيل الدخول',
+                                style: GoogleFonts.cairo(
+                                  color: navy,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 16,
                                 ),
                               ),
                             ),
-
-                            const SizedBox(height: 20),
-
-                            const Text(
-                              'بوابة الإدارة الآمنة',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                color: mutedGold,
-                                fontSize: 12,
+                            style: FilledButton.styleFrom(
+                              backgroundColor: lightGold,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-
-                      const SizedBox(height: 22),
-
-                      const Text(
-                        'وكالة مدى باي ©',
-                        style: TextStyle(
-                          color: mutedGold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -530,10 +468,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ------------------------------------------------------------
-// القائمة الإدارية والواجهة الاحترافية
-// ------------------------------------------------------------
-
+// ================= القائمة الإدارية =================
 class AdminShell extends StatefulWidget {
   final String name;
   final String role;
@@ -558,11 +493,19 @@ class _AdminShellState extends State<AdminShell> {
     ('الأرصدة', Icons.account_balance_wallet_rounded),
     ('التحويلات', Icons.swap_horiz_rounded),
     ('الخدمات والأسعار', Icons.apps_rounded),
+    ('إعدادات التحديث', Icons.system_update_rounded),
     ('التقارير', Icons.bar_chart_rounded),
   ];
 
-  bool get isOwner => widget.role == 'OWNER';
-  bool get isAdmin => isOwner || widget.role == 'ADMIN';
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        UpdateChecker.checkForUpdate(context);
+      }
+    });
+  }
 
   Future<void> logout() async {
     await db.auth.signOut();
@@ -609,6 +552,8 @@ class _AdminShellState extends State<AdminShell> {
           table: 'services',
           icon: Icons.apps_rounded,
         );
+      case 6:
+        return const AppSettingsPage();
       default:
         return const ReportsPage();
     }
@@ -618,49 +563,62 @@ class _AdminShellState extends State<AdminShell> {
   Widget build(BuildContext context) {
     final wide = MediaQuery.of(context).size.width >= 850;
 
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            'مدى باي',
-            style: TextStyle(fontWeight: FontWeight.w900),
+    return Scaffold(
+      backgroundColor: navy,
+      appBar: AppBar(
+        title: Text(
+          'مدى باي',
+          style: GoogleFonts.cairo(
+            fontWeight: FontWeight.w900,
+            color: lightGold,
           ),
-          actions: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              child: Center(
-                child: Text(
-                  arabicRole(widget.role),
-                  style: const TextStyle(
-                    color: green,
-                    fontWeight: FontWeight.bold,
-                  ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'فحص التحديث',
+            onPressed: () => UpdateChecker.checkForUpdate(
+              context,
+              showNoUpdateMessage: true,
+            ),
+            icon: const Icon(Icons.system_update, color: lightGold),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Center(
+              child: Text(
+                arabicRole(widget.role),
+                style: GoogleFonts.cairo(
+                  color: lightGold,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'تسجيل الخروج',
-              onPressed: logout,
-              icon: const Icon(Icons.logout_rounded),
+          ),
+          IconButton(
+            tooltip: 'خروج',
+            onPressed: logout,
+            icon: const Icon(Icons.logout_rounded, color: lightGold),
+          ),
+        ],
+      ),
+      drawer: wide
+         ? null
+          : Drawer(
+              backgroundColor: navy,
+              child: buildMenu(),
             ),
-          ],
-        ),
-        drawer: wide ? null : Drawer(child: buildMenu()),
-        body: Row(
-          children: [
-            if (wide)
-              SizedBox(width: 265, child: buildMenu()),
-            Expanded(child: currentPage()),
-          ],
-        ),
+      body: Row(
+        children: [
+          if (wide) SizedBox(width: 280, child: buildMenu()),
+          Expanded(child: currentPage()),
+        ],
       ),
     );
   }
 
   Widget buildMenu() {
     return Container(
-      color: Colors.white,
+      color: navy,
       child: Column(
         children: [
           Container(
@@ -668,7 +626,7 @@ class _AdminShellState extends State<AdminShell> {
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 25),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [deepGreen, green],
+                colors: [navyLight, navy],
                 begin: Alignment.topRight,
                 end: Alignment.bottomLeft,
               ),
@@ -678,37 +636,24 @@ class _AdminShellState extends State<AdminShell> {
               children: [
                 const CircleAvatar(
                   radius: 27,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.verified_user_rounded, color: green),
+                  backgroundColor: lightGold,
+                  child: Icon(
+                    Icons.verified_user_rounded,
+                    color: navy,
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Text(
                   widget.name,
-                  style: const TextStyle(
+                  style: GoogleFonts.cairo(
                     color: Colors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 5),
                 Text(
                   arabicRole(widget.role),
-                  style: const TextStyle(color: Color(0xFFD9EAE4)),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 11,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(.13),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'لوحة التحكم',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
+                  style: GoogleFonts.cairo(color: mutedGold),
                 ),
               ],
             ),
@@ -724,27 +669,24 @@ class _AdminShellState extends State<AdminShell> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: Material(
-                    color: active ? const Color(0xFFE4F1ED) : Colors.white,
+                    color: active? cardDark : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     child: ListTile(
                       leading: Icon(
                         item.$2,
-                        color: active ? green : Colors.blueGrey,
+                        color: active? lightGold : Colors.white54,
                       ),
                       title: Text(
                         item.$1,
-                        style: TextStyle(
-                          color: active ? deepGreen : Colors.black87,
+                        style: GoogleFonts.cairo(
+                          color: active? lightGold : Colors.white70,
                           fontWeight:
-                              active ? FontWeight.w800 : FontWeight.normal,
+                              active? FontWeight.w800 : FontWeight.normal,
                         ),
                       ),
                       trailing: active
-                          ? const Icon(Icons.chevron_left, color: gold)
+                         ? const Icon(Icons.chevron_left, color: gold)
                           : null,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
                       onTap: () {
                         setState(() => selected = index);
                         if (MediaQuery.of(context).size.width < 850) {
@@ -757,10 +699,13 @@ class _AdminShellState extends State<AdminShell> {
               },
             ),
           ),
-          const Divider(),
+          const Divider(color: Color(0x33D4AF37)),
           ListTile(
             leading: const Icon(Icons.logout, color: Colors.redAccent),
-            title: const Text('تسجيل الخروج'),
+            title: Text(
+              'تسجيل الخروج',
+              style: GoogleFonts.cairo(color: Colors.white),
+            ),
             onTap: logout,
           ),
           const SizedBox(height: 10),
@@ -770,10 +715,7 @@ class _AdminShellState extends State<AdminShell> {
   }
 }
 
-// ------------------------------------------------------------
-// الصفحة الرئيسية - إحصائيات من قاعدة البيانات
-// ------------------------------------------------------------
-
+// ================= Dashboard =================
 class DashboardPage extends StatefulWidget {
   final String name;
   final String role;
@@ -824,6 +766,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ]);
 
       if (!mounted) return;
+
       setState(() {
         users = values[0];
         transactions = values[1];
@@ -835,7 +778,7 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'تعذر تحميل الإحصائيات. تحقق من اتصال قاعدة البيانات والصلاحيات.';
+        error = 'تعذر تحميل الإحصائيات';
       });
     }
   }
@@ -844,6 +787,8 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: load,
+      color: lightGold,
+      backgroundColor: cardDark,
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
@@ -851,121 +796,85 @@ class _DashboardPageState extends State<DashboardPage> {
             padding: const EdgeInsets.all(23),
             decoration: BoxDecoration(
               gradient: const LinearGradient(
-                colors: [green, deepGreen],
-                begin: Alignment.topRight,
-                end: Alignment.bottomLeft,
+                colors: [navyLight, navy],
               ),
               borderRadius: BorderRadius.circular(25),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x22304D44),
-                  blurRadius: 18,
-                  offset: Offset(0, 8),
-                ),
-              ],
+              border: Border.all(color: const Color(0x33D4AF37)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'لوحة التحكم الرئيسية',
-                  style: TextStyle(color: Color(0xFFD5E8E1)),
-                ),
-                const SizedBox(height: 10),
                 Text(
                   'مرحبًا، ${widget.name}',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: GoogleFonts.cairo(
+                    color: lightGold,
                     fontSize: 23,
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(height: 8),
                 Text(
                   'الدور: ${arabicRole(widget.role)}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 18),
-                const Row(
-                  children: [
-                    Icon(Icons.shield_rounded, color: gold),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'إدارة مدى باي',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+                  style: GoogleFonts.cairo(color: Colors.white70),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 22),
-          const Text(
+          Text(
             'ملخص النظام',
-            style: TextStyle(
-              color: deepGreen,
+            style: GoogleFonts.cairo(
+              color: lightGold,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 12),
           if (loading)
-            const Padding(
-              padding: EdgeInsets.all(25),
-              child: Center(child: CircularProgressIndicator(color: green)),
+            const Center(
+              child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.error_outline, color: Colors.red),
-                title: Text(error!),
-                trailing: IconButton(
-                  icon: const Icon(Icons.refresh),
-                  onPressed: load,
-                ),
+                title: Text(error!, style: GoogleFonts.cairo()),
               ),
             )
           else
             GridView.count(
               crossAxisCount:
-                  MediaQuery.of(context).size.width > 650 ? 4 : 2,
+                  MediaQuery.of(context).size.width > 650? 4 : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               childAspectRatio: 1.22,
               children: [
-                StatCard('المستخدمون', '$users', Icons.people_alt, green),
+                StatCard('المستخدمون', '$users', Icons.people_alt, lightGold),
                 StatCard(
                   'المعاملات',
                   '$transactions',
                   Icons.swap_horiz,
-                  const Color(0xFF3576B8),
+                  const Color(0xFF5BA4E5),
                 ),
                 StatCard(
                   'طلبات التسجيل',
                   '$requests',
                   Icons.pending_actions,
-                  const Color(0xFFB47B20),
+                  const Color(0xFFE8C765),
                 ),
                 StatCard(
                   'الخدمات',
                   '$services',
                   Icons.apps,
-                  const Color(0xFF7456A8),
+                  const Color(0xFF9B8AF4),
                 ),
               ],
             ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             'الوصول السريع',
-            style: TextStyle(
-              color: deepGreen,
+            style: GoogleFonts.cairo(
+              color: lightGold,
               fontSize: 20,
               fontWeight: FontWeight.w900,
             ),
@@ -973,37 +882,24 @@ class _DashboardPageState extends State<DashboardPage> {
           const SizedBox(height: 12),
           QuickButton(
             title: 'طلبات التسجيل',
-            subtitle: 'عرض الطلبات الواردة ومراجعتها',
+            subtitle: 'مراجعة الطلبات',
             icon: Icons.assignment_turned_in_rounded,
             color: const Color(0xFFB47B20),
             onTap: () => widget.onOpen(1),
           ),
           QuickButton(
             title: 'إدارة المستخدمين',
-            subtitle: 'عرض الحسابات المسجلة',
+            subtitle: 'عرض الحسابات',
             icon: Icons.people_alt_rounded,
-            color: green,
+            color: navyLight,
             onTap: () => widget.onOpen(2),
           ),
           QuickButton(
-            title: 'المعاملات والتحويلات',
-            subtitle: 'مراجعة سجلات المعاملات',
-            icon: Icons.swap_horiz_rounded,
-            color: const Color(0xFF3576B8),
-            onTap: () => widget.onOpen(4),
-          ),
-          QuickButton(
-            title: 'الخدمات والأسعار',
-            subtitle: 'عرض الخدمات المسجلة',
-            icon: Icons.apps_rounded,
-            color: const Color(0xFF7456A8),
-            onTap: () => widget.onOpen(5),
-          ),
-          const SizedBox(height: 20),
-          OutlinedButton.icon(
-            onPressed: load,
-            icon: const Icon(Icons.refresh),
-            label: const Text('تحديث بيانات لوحة التحكم'),
+            title: 'إعدادات التحديث',
+            subtitle: 'التحكم بنسخة العميل',
+            icon: Icons.system_update_rounded,
+            color: gold,
+            onTap: () => widget.onOpen(6),
           ),
         ],
       ),
@@ -1024,16 +920,9 @@ class StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardDark,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE7ECE9)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x08000000),
-            blurRadius: 12,
-            offset: Offset(0, 5),
-          ),
-        ],
+        border: Border.all(color: const Color(0x22D4AF37)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,14 +934,16 @@ class StatCard extends StatelessWidget {
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
+            style: GoogleFonts.cairo(
               fontSize: 24,
               fontWeight: FontWeight.w900,
-              color: deepGreen,
+              color: lightGold,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(title, style: const TextStyle(color: Colors.black54)),
+          Text(
+            title,
+            style: GoogleFonts.cairo(color: Colors.white54),
+          ),
         ],
       ),
     );
@@ -1078,12 +969,12 @@ class QuickButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: Colors.white,
+      color: cardDark,
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 11),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: Color(0xFFE7ECE9)),
+        side: const BorderSide(color: Color(0x1AD4AF37)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(18),
@@ -1100,15 +991,8 @@ class QuickButton extends StatelessWidget {
                     colors: [color, color.withOpacity(.72)],
                   ),
                   borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: color.withOpacity(.18),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
                 ),
-                child: Icon(icon, color: Colors.white, size: 26),
+                child: Icon(icon, color: navy, size: 26),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -1117,17 +1001,15 @@ class QuickButton extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
-                        color: deepGreen,
+                      style: GoogleFonts.cairo(
+                        color: lightGold,
                         fontWeight: FontWeight.w800,
-                        fontSize: 15,
                       ),
                     ),
-                    const SizedBox(height: 5),
                     Text(
                       subtitle,
-                      style: const TextStyle(
-                        color: Colors.black54,
+                      style: GoogleFonts.cairo(
+                        color: Colors.white54,
                         fontSize: 12,
                       ),
                     ),
@@ -1143,11 +1025,199 @@ class QuickButton extends StatelessWidget {
   }
 }
 
-// ------------------------------------------------------------
-// صفحات البيانات الفعلية: profiles / transactions / services
-// / registration_requests
-// ------------------------------------------------------------
+// ========= صفحة التحكم بالتحديث =========
+class AppSettingsPage extends StatefulWidget {
+  const AppSettingsPage({super.key});
 
+  @override
+  State<AppSettingsPage> createState() => _AppSettingsPageState();
+}
+
+class _AppSettingsPageState extends State<AppSettingsPage> {
+  bool loading = true;
+  final latestCtrl = TextEditingController();
+  final minCtrl = TextEditingController();
+  final urlCtrl = TextEditingController();
+  final notesCtrl = TextEditingController();
+  bool force = false;
+  bool maintenance = false;
+
+  @override
+  void initState() {
+    super.initState();
+    load();
+  }
+
+  Future<void> load() async {
+    setState(() => loading = true);
+    try {
+      final data =
+          await db.from('app_settings').select().eq('id', 1).maybeSingle();
+      if (data!= null) {
+        latestCtrl.text = data['latest_version']?? '';
+        minCtrl.text = data['min_version']?? '';
+        urlCtrl.text = data['apk_url']?? '';
+        notesCtrl.text = data['update_notes']?? '';
+        force = data['update_force']?? false;
+        maintenance = data['maintenance_mode']?? false;
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
+  Future<void> save() async {
+    try {
+      await db.from('app_settings').upsert({
+        'id': 1,
+        'latest_version': latestCtrl.text.trim(),
+        'min_version': minCtrl.text.trim(),
+        'apk_url': urlCtrl.text.trim(),
+        'update_notes': notesCtrl.text.trim(),
+        'update_force': force,
+        'maintenance_mode': maintenance,
+        'updated_at': DateTime.now().toIso8601String(),
+      });
+      if (!mounted) return;
+      message(context, 'تم حفظ إعدادات التحديث ✅');
+    } catch (e) {
+      if (!mounted) return;
+      message(context, 'خطأ: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return const Center(
+        child: CircularProgressIndicator(color: lightGold),
+      );
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(18),
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: goldGradient,
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'إدارة تحديثات التطبيقات',
+                style: GoogleFonts.cairo(
+                  color: navy,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 20,
+                ),
+              ),
+              Text(
+                'تتحكم بنسخة العميل والإدارة معاً',
+                style: GoogleFonts.cairo(color: navy, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        _field(
+          'أحدث نسخة (latest_version)',
+          latestCtrl,
+          'مثال: 1.0.2',
+        ),
+        _field(
+          'أقل نسخة إجبارية (min_version)',
+          minCtrl,
+          'مثال: 1.0.1',
+        ),
+        _field(
+          'رابط التحميل المباشر (apk_url)',
+          urlCtrl,
+          'https://...',
+        ),
+        _field(
+          'ملاحظات التحديث',
+          notesCtrl,
+          '✨ تحسينات جديدة',
+          maxLines: 3,
+        ),
+        SwitchListTile(
+          title: Text(
+            'تحديث إجباري',
+            style: GoogleFonts.cairo(color: lightGold),
+          ),
+          value: force,
+          activeColor: lightGold,
+          onChanged: (v) => setState(() => force = v),
+        ),
+        SwitchListTile(
+          title: Text(
+            'وضع الصيانة',
+            style: GoogleFonts.cairo(color: lightGold),
+          ),
+          value: maintenance,
+          activeColor: Colors.redAccent,
+          onChanged: (v) => setState(() => maintenance = v),
+        ),
+        const SizedBox(height: 16),
+        FilledButton.icon(
+          onPressed: save,
+          icon: const Icon(Icons.save, color: navy),
+          label: Text(
+            'حفظ التغييرات',
+            style: GoogleFonts.cairo(
+              color: navy,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: lightGold,
+            minimumSize: const Size.fromHeight(50),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _field(
+    String label,
+    TextEditingController c,
+    String hint, {
+    int maxLines = 1,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.cairo(color: mutedGold, fontSize: 12),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: c,
+            maxLines: maxLines,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: const TextStyle(color: Colors.white24),
+              filled: true,
+              fillColor: cardDark,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ========= باقي الصفحات =========
 class DataPage extends StatefulWidget {
   final String title;
   final String table;
@@ -1188,30 +1258,26 @@ class _DataPageState extends State<DataPage> {
 
       if (widget.filterOwnTransactions) {
         final id = db.auth.currentUser?.id;
-        if (id == null) throw Exception('انتهت جلسة الدخول');
+        if (id == null) throw Exception('انتهت الجلسة');
 
         result = await db
-            .from(widget.table)
-            .select()
-            .eq('user_id', id)
-            .order('created_at', ascending: false)
-            .limit(100);
+           .from(widget.table)
+           .select()
+           .eq('user_id', id)
+           .order('created_at', ascending: false)
+           .limit(100);
       } else if (widget.table == 'transactions') {
         result = await db
-            .from(widget.table)
-            .select()
-            .order('created_at', ascending: false)
-            .limit(100);
-      } else if (widget.table == 'registration_requests') {
-        result = await db
-            .from(widget.table)
-            .select()
-            .limit(100);
+           .from(widget.table)
+           .select()
+           .order('created_at', ascending: false)
+           .limit(100);
       } else {
         result = await db.from(widget.table).select().limit(100);
       }
 
       if (!mounted) return;
+
       setState(() {
         rows = List<Map<String, dynamic>>.from(result);
         loading = false;
@@ -1220,7 +1286,7 @@ class _DataPageState extends State<DataPage> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'تعذر تحميل البيانات. قد تكون صلاحيات القراءة غير متاحة.';
+        error = 'تعذر تحميل البيانات';
       });
     }
   }
@@ -1229,13 +1295,17 @@ class _DataPageState extends State<DataPage> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: load,
+      color: lightGold,
+      backgroundColor: cardDark,
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [green, deepGreen]),
+              gradient: const LinearGradient(
+                colors: [navyLight, navy],
+              ),
               borderRadius: BorderRadius.circular(22),
             ),
             child: Row(
@@ -1248,16 +1318,15 @@ class _DataPageState extends State<DataPage> {
                     children: [
                       Text(
                         widget.title,
-                        style: const TextStyle(
+                        style: GoogleFonts.cairo(
                           color: Colors.white,
                           fontSize: 21,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
-                      const SizedBox(height: 5),
-                      const Text(
-                        'البيانات المحمّلة من قاعدة البيانات',
-                        style: TextStyle(color: Colors.white70),
+                      Text(
+                        'من قاعدة البيانات',
+                        style: GoogleFonts.cairo(color: Colors.white70),
                       ),
                     ],
                   ),
@@ -1271,137 +1340,95 @@ class _DataPageState extends State<DataPage> {
           ),
           const SizedBox(height: 16),
           if (loading)
-            const Padding(
-              padding: EdgeInsets.all(35),
-              child: Center(child: CircularProgressIndicator(color: green)),
+            const Center(
+              child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
-                leading: const Icon(Icons.error_outline, color: Colors.red),
-                title: Text(error!),
-                trailing: IconButton(
-                  onPressed: load,
-                  icon: const Icon(Icons.refresh),
-                ),
+                title: Text(error!, style: GoogleFonts.cairo()),
               ),
             )
           else if (rows.isEmpty)
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(25),
+                padding: const EdgeInsets.all(25),
                 child: Text(
-                  'لا توجد سجلات ظاهرة، أو أن سياسات قاعدة البيانات تمنع قراءتها.',
+                  'لا توجد سجلات',
                   textAlign: TextAlign.center,
+                  style: GoogleFonts.cairo(),
                 ),
               ),
             )
-          else ...[
+          else...[
             Text(
-              'عدد السجلات المعروضة: ${rows.length}',
-              style: const TextStyle(
-                color: deepGreen,
+              'عدد السجلات: ${rows.length}',
+              style: GoogleFonts.cairo(
+                color: lightGold,
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 10),
-            for (final row in rows) _recordCard(row),
+            for (final row in rows)
+              Card(
+                color: cardDark,
+                child: ExpansionTile(
+                  leading: CircleAvatar(
+                    backgroundColor: const Color(0xFF1A2744),
+                    child: Icon(widget.icon, color: gold),
+                  ),
+                  title: Text(
+                    readable(
+                      row['full_name']??
+                          row['name']??
+                          row['phone']??
+                          row['id'],
+                    ),
+                    style: GoogleFonts.cairo(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  subtitle: Text(
+                    'الحالة: ${readable(row['status'])}',
+                    style: GoogleFonts.cairo(color: Colors.white54),
+                  ),
+                  children: [
+                    for (final k in row.keys)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 125,
+                              child: Text(
+                                k,
+                                style: GoogleFonts.cairo(
+                                  fontWeight: FontWeight.bold,
+                                  color: gold,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: SelectableText(
+                                readable(row[k]),
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
           ],
         ],
       ),
     );
   }
-
-  Widget _recordCard(Map<String, dynamic> row) {
-    final preferred = [
-      'full_name',
-      'name',
-      'phone',
-      'email',
-      'status',
-      'account_type',
-      'requested_role',
-      'amount',
-      'total_amount',
-      'fee',
-      'commission',
-      'service_id',
-      'user_id',
-      'created_at',
-      'id',
-    ];
-
-    final keys = <String>[
-      ...preferred.where(row.containsKey),
-      ...row.keys.where((k) => !preferred.contains(k)),
-    ];
-
-    return Card(
-      color: Colors.white,
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 11),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(17),
-        side: const BorderSide(color: Color(0xFFE5ECE8)),
-      ),
-      child: ExpansionTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE4F1ED),
-          child: Icon(widget.icon, color: green),
-        ),
-        title: Text(
-          readable(
-            row['full_name'] ??
-                row['name'] ??
-                row['phone'] ??
-                row['id'],
-          ),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontWeight: FontWeight.w800,
-            color: deepGreen,
-          ),
-        ),
-        subtitle: Text(
-          'الحالة: ${readable(row['status'])}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        children: [
-          const Divider(height: 1),
-          for (final key in keys)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 7, 16, 7),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 125,
-                    child: Text(
-                      key,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: green,
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: SelectableText(readable(row[key])),
-                  ),
-                ],
-              ),
-            ),
-          const SizedBox(height: 10),
-        ],
-      ),
-    );
-  }
 }
-
-// ------------------------------------------------------------
-// الأرصدة: عرض فقط، دون تعديل مالي غير آمن
-// ------------------------------------------------------------
 
 class BalancePage extends StatefulWidget {
   const BalancePage({super.key});
@@ -1429,11 +1456,12 @@ class _BalancePageState extends State<BalancePage> {
 
     try {
       final data = await db
-          .from('profiles')
-          .select('id, full_name, status, balance')
-          .limit(200);
+         .from('profiles')
+         .select('id, full_name, status, balance')
+         .limit(200);
 
       if (!mounted) return;
+
       setState(() {
         profiles = List<Map<String, dynamic>>.from(data);
         loading = false;
@@ -1442,7 +1470,7 @@ class _BalancePageState extends State<BalancePage> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'تعذر قراءة الأرصدة. تحقق من سياسة القراءة المسموح بها.';
+        error = 'تعذر قراءة الأرصدة';
       });
     }
   }
@@ -1451,27 +1479,31 @@ class _BalancePageState extends State<BalancePage> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: load,
+      color: lightGold,
+      backgroundColor: cardDark,
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
           Container(
             padding: const EdgeInsets.all(22),
             decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [green, deepGreen]),
+              gradient: const LinearGradient(
+                colors: [navyLight, navy],
+              ),
               borderRadius: BorderRadius.circular(22),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.account_balance_wallet_rounded,
                   color: gold,
                   size: 34,
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'أرصدة المستخدمين',
-                    style: TextStyle(
+                    style: GoogleFonts.cairo(
                       color: Colors.white,
                       fontWeight: FontWeight.w900,
                       fontSize: 21,
@@ -1481,58 +1513,41 @@ class _BalancePageState extends State<BalancePage> {
               ],
             ),
           ),
-          const SizedBox(height: 14),
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(14),
-              child: Text(
-                'هذه الصفحة للعرض فقط. تعديل الرصيد يجب أن يتم '
-                'من خلال إجراء مالي خادمي موثوق يسجل العملية ويمنع التلاعب.',
-              ),
-            ),
-          ),
           if (loading)
             const Center(
               child: Padding(
                 padding: EdgeInsets.all(30),
-                child: CircularProgressIndicator(color: green),
+                child: CircularProgressIndicator(color: lightGold),
               ),
             )
-          else if (error != null)
+          else if (error!= null)
             ListTile(
-              title: Text(error!),
-              trailing: IconButton(
-                onPressed: load,
-                icon: const Icon(Icons.refresh),
-              ),
-            )
-          else if (profiles.isEmpty)
-            const Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('لا توجد سجلات متاحة.'),
+              title: Text(error!, style: GoogleFonts.cairo()),
             )
           else
             for (final p in profiles)
               Card(
-                color: Colors.white,
+                color: cardDark,
                 child: ListTile(
                   leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFE4F1ED),
+                    backgroundColor: Color(0xFF1A2744),
                     child: Icon(
                       Icons.account_balance_wallet,
-                      color: green,
+                      color: gold,
                     ),
                   ),
-                  title: Text(readable(p['full_name'])),
-                  subtitle: Text(
-                    'الحالة: ${readable(p['status'])}\n'
-                    'معرّف الحساب: ${readable(p['id'])}',
+                  title: Text(
+                    readable(p['full_name']),
+                    style: GoogleFonts.cairo(color: Colors.white),
                   ),
-                  isThreeLine: true,
+                  subtitle: Text(
+                    'الحالة: ${readable(p['status'])}',
+                    style: GoogleFonts.cairo(color: Colors.white54),
+                  ),
                   trailing: Text(
                     readable(p['balance']),
-                    style: const TextStyle(
-                      color: green,
+                    style: GoogleFonts.cairo(
+                      color: lightGold,
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
                     ),
@@ -1544,10 +1559,6 @@ class _BalancePageState extends State<BalancePage> {
     );
   }
 }
-
-// ------------------------------------------------------------
-// التقارير - أعداد حقيقية ضمن ما تسمح به RLS
-// ------------------------------------------------------------
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});
@@ -1587,6 +1598,7 @@ class _ReportsPageState extends State<ReportsPage> {
       ]);
 
       if (!mounted) return;
+
       setState(() {
         totals = {
           'المستخدمون': results[0],
@@ -1600,7 +1612,7 @@ class _ReportsPageState extends State<ReportsPage> {
       if (!mounted) return;
       setState(() {
         loading = false;
-        error = 'تعذر إنشاء التقرير بسبب الاتصال أو صلاحيات القراءة.';
+        error = 'تعذر إنشاء التقرير';
       });
     }
   }
@@ -1609,61 +1621,48 @@ class _ReportsPageState extends State<ReportsPage> {
   Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: load,
+      color: lightGold,
       child: ListView(
         padding: const EdgeInsets.all(18),
         children: [
-          const Text(
+          Text(
             'التقارير والإحصائيات',
-            style: TextStyle(
+            style: GoogleFonts.cairo(
               fontSize: 24,
-              color: deepGreen,
+              color: lightGold,
               fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 14),
           if (loading)
             const Center(
-              child: Padding(
-                padding: EdgeInsets.all(30),
-                child: CircularProgressIndicator(color: green),
-              ),
+              child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
-                title: Text(error!),
-                trailing: IconButton(
-                  onPressed: load,
-                  icon: const Icon(Icons.refresh),
-                ),
+                title: Text(error!, style: GoogleFonts.cairo()),
               ),
             )
           else
-            for (final entry in totals.entries)
+            for (final e in totals.entries)
               Card(
-                color: Colors.white,
+                color: cardDark,
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: Color(0xFFE4F1ED),
-                    child: Icon(Icons.bar_chart_rounded, color: green),
+                  title: Text(
+                    e.key,
+                    style: GoogleFonts.cairo(color: Colors.white),
                   ),
-                  title: Text(entry.key),
                   trailing: Text(
-                    '${entry.value}',
-                    style: const TextStyle(
-                      color: green,
-                      fontSize: 22,
+                    '${e.value}',
+                    style: GoogleFonts.cairo(
+                      color: lightGold,
                       fontWeight: FontWeight.w900,
+                      fontSize: 20,
                     ),
                   ),
                 ),
               ),
-          const SizedBox(height: 10),
-          const Text(
-            'تعكس هذه الأعداد السجلات التي تسمح سياسات قاعدة البيانات '
-            'للحساب الحالي بقراءتها؛ وليست بالضرورة إجمالي سجلات النظام.',
-            style: TextStyle(color: Colors.black54),
-          ),
         ],
       ),
     );
