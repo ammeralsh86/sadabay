@@ -41,7 +41,6 @@ jobs:
             --dart-define=SUPABASE_URL=${{ secrets.SUPABASE_URL }} \
             --dart-define=SUPABASE_KEY=${{ secrets.SUPABASE_KEY }}
 
-      - 
       - name: Verify APK
         run: |
           test -f customer_app/build/app/outputs/flutter-apk/app-release.apk || {
