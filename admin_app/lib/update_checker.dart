@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -16,6 +15,8 @@ class UpdateChecker {
     BuildContext context, {
     bool showNoUpdateMessage = false,
   }) async {
+    if (!context.mounted) return;
+
     try {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version.trim();
@@ -36,8 +37,7 @@ class UpdateChecker {
         return;
       }
 
-      final latest =
-          settings['latest_version']?.toString().trim() ?? '';
+      final latest = settings['latest_version']?.toString().trim() ?? '';
 
       if (latest.isEmpty || !_isValidVersion(latest)) {
         if (showNoUpdateMessage && context.mounted) {
@@ -46,8 +46,7 @@ class UpdateChecker {
         return;
       }
 
-      final minVersion =
-          settings['min_version']?.toString().trim() ?? latest;
+      final minVersion = settings['min_version']?.toString().trim() ?? latest;
 
       if (!_isValidVersion(minVersion)) {
         if (showNoUpdateMessage && context.mounted) {
@@ -57,16 +56,11 @@ class UpdateChecker {
       }
 
       final configuredUrl = settings['apk_url']?.toString().trim();
-
       final apkUrl = configuredUrl == null || configuredUrl.isEmpty
           ? 'https://github.com/$owner/$repo/releases/latest'
           : configuredUrl;
 
-      final notes = settings['update_notes']?.toString().trim().isNotEmpty ==
-              true
-          ? settings['update_notes'].toString().trim()
-          : 'يوجد تحديث جديد يحسن الأداء.';
-
+      final notes = settings['update_notes']?.toString().trim();
       final forceUpdate = settings['update_force'] == true;
       final maintenance = settings['maintenance_mode'] == true;
 
@@ -75,23 +69,22 @@ class UpdateChecker {
       if (maintenance) {
         _showMaintenanceDialog(
           context,
-          settings['maintenance_message']?.toString().trim().isNotEmpty ==
-                  true
+          settings['maintenance_message']?.toString().trim().isNotEmpty == true
               ? settings['maintenance_message'].toString().trim()
               : 'التطبيق تحت الصيانة حالياً.',
         );
         return;
       }
 
-      final isForce =
-          forceUpdate || _isNewer(minVersion, currentVersion);
+      final isForce = forceUpdate || _isNewer(minVersion, currentVersion);
 
       if (_isNewer(latest, currentVersion)) {
+        if (!context.mounted) return;
         _showUpdateDialog(
           context,
           currentVersion,
           latest,
-          notes,
+          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
           apkUrl,
           isForce,
         );
@@ -99,18 +92,19 @@ class UpdateChecker {
       }
 
       if (isForce) {
+        if (!context.mounted) return;
         _showUpdateDialog(
           context,
           currentVersion,
           latest,
-          notes,
+          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
           apkUrl,
           true,
         );
         return;
       }
 
-      if (showNoUpdateMessage) {
+      if (showNoUpdateMessage && context.mounted) {
         _showMessage(context, 'أنت على أحدث إصدار ($currentVersion).');
       }
     } catch (_) {
@@ -121,32 +115,42 @@ class UpdateChecker {
   }
 
   static bool _isValidVersion(String version) {
-    final normalized = version.trim().replaceFirst(
-          RegExp(r'^[vV]'),
-          '',
-        );
-
+    final normalized = version.trim();
     if (normalized.isEmpty) return false;
 
-    return normalized.split('.').every(
-          (part) =>
-              part.isNotEmpty &&
-              int.tryParse(part) != null &&
-              int.parse(part) >= 0,
-        );
+    final withoutPrefix = normalized.replaceFirst(RegExp(r'^[vV]'), '');
+    final parts = withoutPrefix
+        .split('+')
+        .first
+        .split('-')
+        .first
+        .split('.')
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) => part.trim())
+        .toList();
+
+    if (parts.isEmpty) return false;
+
+    return parts.every(
+      (part) => int.tryParse(part) != null && int.parse(part) >= 0,
+    );
+  }
+
+  static List<int> _parseVersionParts(String version) {
+    final normalized = version.trim().replaceFirst(RegExp(r'^[vV]'), '');
+    return RegExp(r'\d+')
+        .allMatches(normalized)
+        .map((match) => int.parse(match.group(0)!))
+        .toList();
   }
 
   static bool _isNewer(String latest, String current) {
-    String normalize(String value) =>
-        value.trim().replaceFirst(RegExp(r'^[vV]'), '');
-
     if (!_isValidVersion(latest) || !_isValidVersion(current)) {
       return false;
     }
 
-    final latestParts = normalize(latest).split('.').map(int.parse).toList();
-    final currentParts =
-        normalize(current).split('.').map(int.parse).toList();
+    final latestParts = _parseVersionParts(latest);
+    final currentParts = _parseVersionParts(current);
 
     final length = latestParts.length > currentParts.length
         ? latestParts.length
