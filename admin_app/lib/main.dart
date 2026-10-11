@@ -111,126 +111,6 @@ String arabicRole(String role) {
 // تسجيل الدخول والتحقق من الحساب والدور
 // ------------------------------------------------------------
 
-class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
-
-  @override
-  State<LoginPage> createState() => _LoginPageState();
-}
-
-class _LoginPageState extends State<LoginPage> {
-  final loginController = TextEditingController();
-  final passwordController = TextEditingController();
-
-  bool loading = false;
-  bool obscure = true;
-
-  @override
-  void dispose() {
-    loginController.dispose();
-    passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> login() async {
-    final login = loginController.text.trim();
-    final password = passwordController.text;
-
-    if (login.isEmpty || password.isEmpty) {
-      message(context, 'أدخل بيانات تسجيل الدخول');
-      return;
-    }
-
-    setState(() => loading = true);
-
-    try {
-      AuthResponse response;
-
-      if (login.contains('@')) {
-        response = await db.auth.signInWithPassword(
-          email: login,
-          password: password,
-        );
-      } else {
-        response = await db.auth.signInWithPassword(
-          phone: login,
-          password: password,
-        );
-      }
-
-      final user = response.user;
-      if (user == null) throw Exception('تعذر التحقق من الحساب');
-
-      final profile = await db
-          .from('profiles')
-          .select('id, full_name, status')
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (profile == null) {
-        await db.auth.signOut();
-        throw Exception('لا يوجد ملف مستخدم مرتبط بهذا الحساب');
-      }
-
-      if (profile['status']?.toString().toUpperCase() != 'ACTIVE') {
-        await db.auth.signOut();
-        throw Exception('الحساب غير مفعل');
-      }
-
-      final rows = await db
-          .from('user_roles')
-          .select('role_id, roles(name)')
-          .eq('user_id', user.id);
-
-      final roleNames = <String>[];
-
-      for (final row in rows) {
-        final relation = row['roles'];
-        if (relation is Map && relation['name'] != null) {
-          roleNames.add(relation['name'].toString().toUpperCase());
-        }
-      }
-
-      const allowed = {
-        'OWNER',
-        'ADMIN',
-        'MANAGER',
-        'EMPLOYEE',
-        'AGENT',
-        'DISTRIBUTOR',
-      };
-
-      final matched = roleNames.where(allowed.contains).toList();
-
-      if (matched.isEmpty) {
-        await db.auth.signOut();
-        throw Exception('هذا الحساب لا يملك دورًا إداريًا');
-      }
-
-      // لا نعطي أولوية عشوائية لدور أقل إذا كان الحساب مالكًا.
-      final role = matched.contains('OWNER')
-          ? 'OWNER'
-          : matched.contains('ADMIN')
-              ? 'ADMIN'
-              : matched.first;
-
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AdminShell(
-            name: readable(profile['full_name']),
-            role: role,
-          ),
-        ),
-      );
-    } on AuthException catch (e) {
-      if (mounted) message(context, e.message);
-    } catch (e) {
-      if (mounted) {
-        message(context, e.toString().replaceFirst('Exception: ', ''));
-      }
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -649,6 +529,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+
 // ------------------------------------------------------------
 // القائمة الإدارية والواجهة الاحترافية
 // ------------------------------------------------------------
