@@ -12,10 +12,6 @@ const lightGold = Color(0xFFE8C765);
 const mutedGold = Color(0xFFB89A5A);
 const bg = Color(0xFF0A1931);
 
-// للتوافق مع الكود القديم
-const green = navy;
-const deepGreen = navyLight;
-
 const LinearGradient goldGradient = LinearGradient(
   colors: [Color(0xFFE8C765), Color(0xFFD4AF37)],
   begin: Alignment.topLeft,
@@ -1617,7 +1613,7 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   @override
-  Widget build(BodyContext context) {
+  Widget build(BuildContext context) { // تم تصحيح BodyContext إلى BuildContext هنا بنجاح
     return RefreshIndicator(
       onRefresh: load,
       color: lightGold,
