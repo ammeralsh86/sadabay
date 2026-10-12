@@ -7,7 +7,6 @@ on:
     paths:
       - 'customer_app/**'
       - '.github/workflows/customer.yml'
-
   workflow_dispatch:
 
 permissions:
@@ -16,6 +15,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: customer_app
 
     steps:
       - name: Checkout Repository
@@ -34,30 +37,22 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create Fresh Android Project
-        run: flutter create --platforms=android --project-name=mada_pay_customer /tmp/mada_pay_customer
-
-      - name: Copy Customer Files
-        run: |
-          cp customer_app/pubspec.yaml /tmp/mada_pay_customer/pubspec.yaml
-          cp -r customer_app/lib /tmp/mada_pay_customer/
-          if [ -d customer_app/assets ]; then cp -r customer_app/assets /tmp/mada_pay_customer/; fi
+      - name: Prepare Android Project
+        run: flutter create --platforms=android --project-name=mada_pay_customer .
 
       - name: Get Dependencies
-        working-directory: /tmp/mada_pay_customer
         run: flutter pub get
 
       - name: Analyze Project
-        working-directory: /tmp/mada_pay_customer
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
-        working-directory: /tmp/mada_pay_customer
         run: flutter build apk --release
 
-      - name: Upload Customer APK
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: mada-pay-customer-release
-          path: /tmp/mada_pay_customer/build/app/outputs/flutter-apk/app-release.apk
+          name: mada-pay-customer
+          path: customer_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
