@@ -35,6 +35,10 @@ pluginManagement {
     }
 }
 
+plugins {
+    id "dev.flutter.plugin-loader" version "1.0.0"
+}
+
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
     repositories {
