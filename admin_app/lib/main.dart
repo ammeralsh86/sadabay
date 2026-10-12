@@ -12,6 +12,10 @@ const lightGold = Color(0xFFE8C765);
 const mutedGold = Color(0xFFB89A5A);
 const bg = Color(0xFF0A1931);
 
+// للتوافق مع الكود القديم
+const green = navy;
+const deepGreen = navyLight;
+
 const LinearGradient goldGradient = LinearGradient(
   colors: [Color(0xFFE8C765), Color(0xFFD4AF37)],
   begin: Alignment.topLeft,
@@ -24,27 +28,22 @@ const LinearGradient backgroundGradient = LinearGradient(
   end: Alignment.bottomCenter,
 );
 
-late final SupabaseClient db;
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'URL');
-  const key = String.fromEnvironment('SUPABASE_KEY', defaultValue: 'YOUR_PUBLISHABLE_KEY');
+  const url = String.fromEnvironment('SUPABASE_URL');
+  const key = String.fromEnvironment('SUPABASE_KEY');
 
-  if (url == 'URL' || key == 'YOUR_PUBLISHABLE_KEY' || url.isEmpty || key.isEmpty) {
-    // يمكن ضبط القيم الافتراضية هنا أو السماح بالتهيئة
+  if (url.isEmpty || key.isEmpty) {
+    runApp(const ConfigErrorApp());
+    return;
   }
 
-  await Supabase.initialize(
-    url: url.isEmpty ? 'URL' : url,
-    publishableKey: key.isEmpty ? 'YOUR_PUBLISHABLE_KEY' : key,
-  );
-
-  db = Supabase.instance.client;
-
+  await Supabase.initialize(url: url, anonKey: key);
   runApp(const MadaPayAdmin());
 }
+
+final db = Supabase.instance.client;
 
 class ConfigErrorApp extends StatelessWidget {
   const ConfigErrorApp({super.key});
@@ -83,6 +82,7 @@ class MadaPayAdmin extends StatelessWidget {
         colorScheme: const ColorScheme.dark(
           primary: lightGold,
           secondary: gold,
+          background: navy,
           surface: cardDark,
         ),
         appBarTheme: AppBarTheme(
@@ -104,10 +104,10 @@ class MadaPayAdmin extends StatelessWidget {
             borderSide: BorderSide.none,
           ),
         ),
-        cardTheme: const CardTheme(
+        cardTheme: CardThemeData(
           color: cardDark,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.all(Radius.circular(18)),
+            borderRadius: BorderRadius.circular(18),
           ),
         ),
       ),
@@ -211,31 +211,31 @@ class _LoginPageState extends State<LoginPage> {
       if (user == null) throw Exception('تعذر التحقق');
 
       final profile = await db
-          .from('profiles')
-          .select('id, full_name, status')
-          .eq('id', user.id)
-          .maybeSingle();
+         .from('profiles')
+         .select('id, full_name, status')
+         .eq('id', user.id)
+         .maybeSingle();
 
       if (profile == null) {
         await db.auth.signOut();
         throw Exception('لا يوجد ملف مستخدم');
       }
 
-      if (profile['status']?.toString().toUpperCase() != 'ACTIVE') {
+      if (profile['status']?.toString().toUpperCase()!= 'ACTIVE') {
         await db.auth.signOut();
         throw Exception('الحساب غير مفعل');
       }
 
       final rows = await db
-          .from('user_roles')
-          .select('role_id, roles(name)')
-          .eq('user_id', user.id);
+         .from('user_roles')
+         .select('role_id, roles(name)')
+         .eq('user_id', user.id);
 
       final roleNames = <String>[];
 
       for (final row in rows) {
         final relation = row['roles'];
-        if (relation is Map && relation['name'] != null) {
+        if (relation is Map && relation['name']!= null) {
           roleNames.add(relation['name'].toString().toUpperCase());
         }
       }
@@ -257,9 +257,9 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       final role = matched.contains('OWNER')
-          ? 'OWNER'
+         ? 'OWNER'
           : matched.contains('ADMIN')
-              ? 'ADMIN'
+             ? 'ADMIN'
               : matched.first;
 
       if (!mounted) return;
@@ -327,7 +327,7 @@ class _LoginPageState extends State<LoginPage> {
                     Container(
                       width: 112,
                       height: 112,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: goldGradient,
                         boxShadow: [
@@ -405,10 +405,10 @@ class _LoginPageState extends State<LoginPage> {
                               icon: Icons.lock_outline_rounded,
                               suffix: IconButton(
                                 onPressed: () =>
-                                    setState(() => obscure = !obscure),
+                                    setState(() => obscure =!obscure),
                                 icon: Icon(
                                   obscure
-                                      ? Icons.visibility_off
+                                     ? Icons.visibility_off
                                       : Icons.visibility,
                                   color: lightGold,
                                 ),
@@ -418,9 +418,9 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           const SizedBox(height: 24),
                           FilledButton.icon(
-                            onPressed: loading ? null : login,
+                            onPressed: loading? null : login,
                             icon: loading
-                                ? const SizedBox(
+                               ? const SizedBox(
                                     width: 19,
                                     height: 19,
                                     child: CircularProgressIndicator(
@@ -438,7 +438,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                               child: Text(
                                 loading
-                                    ? 'جارٍ التحقق...'
+                                   ? 'جارٍ التحقق...'
                                     : 'تسجيل الدخول',
                                 style: GoogleFonts.cairo(
                                   color: navy,
@@ -602,7 +602,7 @@ class _AdminShellState extends State<AdminShell> {
         ],
       ),
       drawer: wide
-          ? null
+         ? null
           : Drawer(
               backgroundColor: navy,
               child: buildMenu(),
@@ -669,23 +669,23 @@ class _AdminShellState extends State<AdminShell> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 3),
                   child: Material(
-                    color: active ? cardDark : Colors.transparent,
+                    color: active? cardDark : Colors.transparent,
                     borderRadius: BorderRadius.circular(14),
                     child: ListTile(
                       leading: Icon(
                         item.$2,
-                        color: active ? lightGold : Colors.white54,
+                        color: active? lightGold : Colors.white54,
                       ),
                       title: Text(
                         item.$1,
                         style: GoogleFonts.cairo(
-                          color: active ? lightGold : Colors.white70,
+                          color: active? lightGold : Colors.white70,
                           fontWeight:
-                              active ? FontWeight.w800 : FontWeight.normal,
+                              active? FontWeight.w800 : FontWeight.normal,
                         ),
                       ),
                       trailing: active
-                          ? const Icon(Icons.chevron_left, color: gold)
+                         ? const Icon(Icons.chevron_left, color: gold)
                           : null,
                       onTap: () {
                         setState(() => selected = index);
@@ -833,7 +833,7 @@ class _DashboardPageState extends State<DashboardPage> {
             const Center(
               child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
                 title: Text(error!, style: GoogleFonts.cairo()),
@@ -842,7 +842,7 @@ class _DashboardPageState extends State<DashboardPage> {
           else
             GridView.count(
               crossAxisCount:
-                  MediaQuery.of(context).size.width > 650 ? 4 : 2,
+                  MediaQuery.of(context).size.width > 650? 4 : 2,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               mainAxisSpacing: 12,
@@ -1053,13 +1053,13 @@ class _AppSettingsPageState extends State<AppSettingsPage> {
     try {
       final data =
           await db.from('app_settings').select().eq('id', 1).maybeSingle();
-      if (data != null) {
-        latestCtrl.text = data['latest_version']?.toString() ?? '';
-        minCtrl.text = data['min_version']?.toString() ?? '';
-        urlCtrl.text = data['apk_url']?.toString() ?? '';
-        notesCtrl.text = data['update_notes']?.toString() ?? '';
-        force = data['update_force'] == true;
-        maintenance = data['maintenance_mode'] == true;
+      if (data!= null) {
+        latestCtrl.text = data['latest_version']?? '';
+        minCtrl.text = data['min_version']?? '';
+        urlCtrl.text = data['apk_url']?? '';
+        notesCtrl.text = data['update_notes']?? '';
+        force = data['update_force']?? false;
+        maintenance = data['maintenance_mode']?? false;
       }
     } finally {
       if (mounted) setState(() => loading = false);
@@ -1261,17 +1261,17 @@ class _DataPageState extends State<DataPage> {
         if (id == null) throw Exception('انتهت الجلسة');
 
         result = await db
-            .from(widget.table)
-            .select()
-            .eq('user_id', id)
-            .order('created_at', ascending: false)
-            .limit(100);
+           .from(widget.table)
+           .select()
+           .eq('user_id', id)
+           .order('created_at', ascending: false)
+           .limit(100);
       } else if (widget.table == 'transactions') {
         result = await db
-            .from(widget.table)
-            .select()
-            .order('created_at', ascending: false)
-            .limit(100);
+           .from(widget.table)
+           .select()
+           .order('created_at', ascending: false)
+           .limit(100);
       } else {
         result = await db.from(widget.table).select().limit(100);
       }
@@ -1343,7 +1343,7 @@ class _DataPageState extends State<DataPage> {
             const Center(
               child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
                 title: Text(error!, style: GoogleFonts.cairo()),
@@ -1360,7 +1360,7 @@ class _DataPageState extends State<DataPage> {
                 ),
               ),
             )
-          else ...[
+          else...[
             Text(
               'عدد السجلات: ${rows.length}',
               style: GoogleFonts.cairo(
@@ -1379,9 +1379,9 @@ class _DataPageState extends State<DataPage> {
                   ),
                   title: Text(
                     readable(
-                      row['full_name'] ??
-                          row['name'] ??
-                          row['phone'] ??
+                      row['full_name']??
+                          row['name']??
+                          row['phone']??
                           row['id'],
                     ),
                     style: GoogleFonts.cairo(
@@ -1456,9 +1456,9 @@ class _BalancePageState extends State<BalancePage> {
 
     try {
       final data = await db
-          .from('profiles')
-          .select('id, full_name, status, balance')
-          .limit(200);
+         .from('profiles')
+         .select('id, full_name, status, balance')
+         .limit(200);
 
       if (!mounted) return;
 
@@ -1520,7 +1520,7 @@ class _BalancePageState extends State<BalancePage> {
                 child: CircularProgressIndicator(color: lightGold),
               ),
             )
-          else if (error != null)
+          else if (error!= null)
             ListTile(
               title: Text(error!, style: GoogleFonts.cairo()),
             )
@@ -1638,7 +1638,7 @@ class _ReportsPageState extends State<ReportsPage> {
             const Center(
               child: CircularProgressIndicator(color: lightGold),
             )
-          else if (error != null)
+          else if (error!= null)
             Card(
               child: ListTile(
                 title: Text(error!, style: GoogleFonts.cairo()),
