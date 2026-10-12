@@ -1,4 +1,19 @@
 pluginManagement {
+    def flutterSdkPath = {
+        def properties = new Properties()
+        def file = new File("local.properties")
+        if (file.exists()) {
+            properties.load(new FileInputStream(file))
+        }
+        def flutterSdkPath = properties.getProperty("flutter.sdk")
+        if (flutterSdkPath == null) {
+            flutterSdkPath = System.getenv("FLUTTER_ROOT")
+        }
+        return flutterSdkPath
+    }()
+
+    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+
     repositories {
         google()
         mavenCentral()
@@ -20,5 +35,4 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "android"
 include ":app"
