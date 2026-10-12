@@ -7,7 +7,6 @@ on:
     paths:
       - 'admin_app/**'
       - '.github/workflows/admin.yml'
-
   workflow_dispatch:
 
 permissions:
@@ -16,6 +15,10 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: admin_app
 
     steps:
       - name: Checkout Repository
@@ -34,30 +37,22 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create Fresh Android Project
-        run: flutter create --platforms=android --project-name=mada_pay_admin /tmp/mada_pay_admin
-
-      - name: Copy Admin Files
-        run: |
-          cp admin_app/pubspec.yaml /tmp/mada_pay_admin/pubspec.yaml
-          cp -r admin_app/lib /tmp/mada_pay_admin/
-          if [ -d admin_app/assets ]; then cp -r admin_app/assets /tmp/mada_pay_admin/; fi
+      - name: Prepare Android Project
+        run: flutter create --platforms=android --project-name=mada_pay_admin .
 
       - name: Get Dependencies
-        working-directory: /tmp/mada_pay_admin
         run: flutter pub get
 
       - name: Analyze Project
-        working-directory: /tmp/mada_pay_admin
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
-        working-directory: /tmp/mada_pay_admin
         run: flutter build apk --release
 
-      - name: Upload Admin APK
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: mada-pay-admin-release
-          path: /tmp/mada_pay_admin/build/app/outputs/flutter-apk/app-release.apk
+          name: mada-pay-admin
+          path: admin_app/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
