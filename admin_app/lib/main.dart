@@ -39,7 +39,8 @@ Future<void> main() async {
     return;
   }
 
-  await Supabase.initialize(url: url, anonKey: key);
+// ignore: deprecated_member_use
+anonKey: '...',
   runApp(const MadaPayAdmin());
 }
 
@@ -81,7 +82,7 @@ class MadaPayAdmin extends StatelessWidget {
         ),
         colorScheme: const ColorScheme.dark(
           primary: lightGold,
-          secondary: gold,
+          surface: _navy,
           background: navy,
           surface: cardDark,
         ),
@@ -104,7 +105,7 @@ class MadaPayAdmin extends StatelessWidget {
             borderSide: BorderSide.none,
           ),
         ),
-        cardTheme: CardThemeData(
+        CardThemeData(
           color: cardDark,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
