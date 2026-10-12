@@ -1,92 +1,41 @@
-name: Build Admin App
+name: Build Admin APK
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'admin_app/**'
-      - '.github/workflows/admin.yml'
-  workflow_dispatch:
-
-permissions:
-  contents: read
+      - '.github/workflows/build_admin.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: temurin
+          distribution: 'zulu'
           java-version: '17'
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
-          channel: stable
-          cache: true
 
-      - name: Prepare Android Platform
-        shell: bash
+      - name: Clean and Get
+        working-directory: admin_app
         run: |
-          set -e
-          mkdir -p /tmp/mada_admin_android
-          cd /tmp/mada_admin_android
-
-          flutter create \
-            --platforms=android \
-            --project-name=mada_pay_admin \
-            --org=com.madapay .
-
-          cd "$GITHUB_WORKSPACE/admin_app"
-          rm -rf android
-          cp -R /tmp/mada_admin_android/android ./android
-
-      - name: Configure Android SDK
-        working-directory: admin_app
-        shell: bash
-        run: |
-          set -e
-          FILE="android/app/build.gradle"
-
-          if [ ! -f "$FILE" ]; then
-            FILE="android/app/build.gradle.kts"
-          fi
-
-          if [ ! -f "$FILE" ]; then
-            echo "Android app Gradle file not found"
-            exit 1
-          fi
-
-          if [[ "$FILE" == *.kts ]]; then
-            sed -i '/android[[:space:]]*{/a\    compileSdk = 35' "$FILE"
-          else
-            sed -i '/android[[:space:]]*{/a\    compileSdkVersion 35' "$FILE"
-          fi
-
-      - name: Get Dependencies
-        working-directory: admin_app
-        run: flutter pub get
-
-      - name: Analyze Project
-        working-directory: admin_app
-        run: flutter analyze --no-fatal-infos
+          rm -f pubspec.lock
+          flutter clean
+          flutter pub get
 
       - name: Build Release APK
         working-directory: admin_app
-        run: flutter build apk --release
+        run: flutter build apk --release --no-tree-shake-icons
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: mada-pay-admin
+          name: admin-apk
           path: admin_app/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error 
