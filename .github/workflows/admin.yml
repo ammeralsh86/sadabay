@@ -32,25 +32,31 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Regenerate Android Platform Files
-        working-directory: admin_app
-        run: flutter create --platforms=android --project-name=mada_pay_admin .
+      - name: Create Fresh Flutter Project
+        run: flutter create --platforms=android --project-name=mada_pay_admin /tmp/mada_pay_admin
+
+      - name: Copy App Files
+        run: |
+          cp admin_app/pubspec.yaml /tmp/mada_pay_admin/pubspec.yaml
+          cp -r admin_app/lib /tmp/mada_pay_admin/
+          if [ -d admin_app/assets ]; then cp -r admin_app/assets /tmp/mada_pay_admin/; fi
+          if [ -d admin_app/test ]; then cp -r admin_app/test /tmp/mada_pay_admin/; fi
 
       - name: Get Dependencies
-        working-directory: admin_app
+        working-directory: /tmp/mada_pay_admin
         run: flutter pub get
 
       - name: Analyze Project
-        working-directory: admin_app
+        working-directory: /tmp/mada_pay_admin
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
-        working-directory: admin_app
+        working-directory: /tmp/mada_pay_admin
         run: flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: mada-pay-admin-release
-          path: admin_app/build/app/outputs/flutter-apk/app-release.apk
+          path: /tmp/mada_pay_admin/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
