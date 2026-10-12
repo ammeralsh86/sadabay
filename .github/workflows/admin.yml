@@ -2,10 +2,12 @@ name: Build Admin App
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'admin_app/**'
       - '.github/workflows/admin.yml'
+
   workflow_dispatch:
 
 permissions:
@@ -32,15 +34,14 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create Fresh Flutter Project
+      - name: Create Fresh Android Project
         run: flutter create --platforms=android --project-name=mada_pay_admin /tmp/mada_pay_admin
 
-      - name: Copy App Files
+      - name: Copy Admin Files
         run: |
           cp admin_app/pubspec.yaml /tmp/mada_pay_admin/pubspec.yaml
           cp -r admin_app/lib /tmp/mada_pay_admin/
           if [ -d admin_app/assets ]; then cp -r admin_app/assets /tmp/mada_pay_admin/; fi
-          if [ -d admin_app/test ]; then cp -r admin_app/test /tmp/mada_pay_admin/; fi
 
       - name: Get Dependencies
         working-directory: /tmp/mada_pay_admin
@@ -54,7 +55,7 @@ jobs:
         working-directory: /tmp/mada_pay_admin
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload Admin APK
         uses: actions/upload-artifact@v4
         with:
           name: mada-pay-admin-release
