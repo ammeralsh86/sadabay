@@ -1,7 +1,6 @@
 name: mada_pay_admin
 description: تطبيق إدارة وكالة مدى باي
 publish_to: 'none'
-
 version: 1.0.0+1
 
 environment:
@@ -16,7 +15,7 @@ dependencies:
   flutter_spinkit: ^5.2.1
   url_launcher: ^6.2.5
   package_info_plus: ^8.0.2
-  app_links: ^6.3.2
+  app_links: 6.3.2
   http: ^1.2.2
   intl: ^0.19.0
 
