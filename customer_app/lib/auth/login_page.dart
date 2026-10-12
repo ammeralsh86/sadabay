@@ -267,7 +267,7 @@ class _CustomerLoginPageState extends State<CustomerLoginPage> {
                           ),
                         ),
                         child: _loading
-                            const SizedBox(
+                            ? const SizedBox(
                                 height: 20,
                                 width: 20,
                                 child: CircularProgressIndicator(
