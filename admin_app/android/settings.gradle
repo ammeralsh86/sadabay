@@ -1,18 +1,32 @@
 pluginManagement {
     def flutterSdkPath = {
         def properties = new Properties()
-        def file = new File("local.properties")
-        if (file.exists()) {
-            properties.load(new FileInputStream(file))
+        def localPropertiesFile = new File("local.properties")
+        if (localPropertiesFile.exists()) {
+            properties.load(new FileInputStream(localPropertiesFile))
         }
-        def flutterSdkPath = properties.getProperty("flutter.sdk")
-        if (flutterSdkPath == null) {
-            flutterSdkPath = System.getenv("FLUTTER_ROOT")
+        def sdkPath = properties.getProperty("flutter.sdk")
+        if (sdkPath == null) {
+            sdkPath = System.getenv("FLUTTER_ROOT")
         }
-        return flutterSdkPath
+        if (sdkPath == null) {
+            try {
+                def stdout = new ByteArrayOutputStream()
+                exec {
+                    commandLine 'flutter', '--sdk-path'
+                    standardOutput = stdout
+                }
+                sdkPath = stdout.toString().trim()
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return sdkPath
     }()
 
-    includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+    if (flutterSdkPath != null && !flutterSdkPath.isEmpty()) {
+        includeBuild("$flutterSdkPath/packages/flutter_tools/gradle")
+    }
 
     repositories {
         google()
@@ -35,4 +49,5 @@ dependencyResolutionManagement {
     }
 }
 
+rootProject.name = "android"
 include ":app"
