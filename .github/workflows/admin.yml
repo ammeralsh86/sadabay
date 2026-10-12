@@ -16,10 +16,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: admin_app
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -37,16 +33,35 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Prepare Android Project
-        run: flutter create --platforms=android --project-name=mada_pay_admin .
+      - name: Prepare Android Platform
+        shell: bash
+        run: |
+          set -e
+
+          mkdir -p /tmp/mada_admin_android
+          cd /tmp/mada_admin_android
+
+          flutter create \
+            --platforms=android \
+            --project-name=mada_pay_admin \
+            --org=com.madapay \
+            .
+
+          cd "$GITHUB_WORKSPACE/admin_app"
+
+          rm -rf android
+          cp -R /tmp/mada_admin_android/android ./android
 
       - name: Get Dependencies
+        working-directory: admin_app
         run: flutter pub get
 
       - name: Analyze Project
+        working-directory: admin_app
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
+        working-directory: admin_app
         run: flutter build apk --release
 
       - name: Upload APK
