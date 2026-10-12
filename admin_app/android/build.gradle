@@ -6,9 +6,13 @@ if (localPropertiesFile.exists()) {
 
 def flutterRoot = localProperties.getProperty('flutter.sdk') ?: System.getenv('FLUTTER_ROOT')
 
+if (flutterRoot == null || flutterRoot.trim() == "") {
+    throw new GradleException("FLUTTER_ROOT is not set and 'flutter.sdk' not found in local.properties. Set FLUTTER_ROOT in the environment or add 'flutter.sdk=<path-to-flutter>' to admin_app/android/local.properties")
+}
+
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply from: "$flutterRoot/packages/flutter_tools/gradle/flutter.gradle"
+apply from: "${flutterRoot}/packages/flutter_tools/gradle/flutter.gradle"
 
 android {
     namespace "com.example.admin_app"
