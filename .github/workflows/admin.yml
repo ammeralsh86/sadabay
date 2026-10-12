@@ -32,7 +32,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Prepare Android Project
+      - name: Regenerate Android Platform Files
         working-directory: admin_app
         run: flutter create --platforms=android --project-name=mada_pay_admin .
 
