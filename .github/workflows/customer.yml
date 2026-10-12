@@ -6,52 +6,58 @@ on:
       - main
     paths:
       - 'customer_app/**'
-      - '.github/workflows/**'
+      - '.github/workflows/customer.yml'
 
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.24.5'
-          channel: 'stable'
+          channel: stable
           cache: true
 
-      - name: Show Flutter Version
-        run: flutter --version
+      - name: Create Fresh Android Project
+        run: flutter create --platforms=android --project-name=mada_pay_customer /tmp/mada_pay_customer
 
-      - name: Clean Project
-        working-directory: customer_app
-        run: flutter clean
+      - name: Copy Customer Files
+        run: |
+          cp customer_app/pubspec.yaml /tmp/mada_pay_customer/pubspec.yaml
+          cp -r customer_app/lib /tmp/mada_pay_customer/
+          if [ -d customer_app/assets ]; then cp -r customer_app/assets /tmp/mada_pay_customer/; fi
 
       - name: Get Dependencies
-        working-directory: customer_app
+        working-directory: /tmp/mada_pay_customer
         run: flutter pub get
 
       - name: Analyze Project
-        working-directory: customer_app
+        working-directory: /tmp/mada_pay_customer
         run: flutter analyze --no-fatal-infos
 
       - name: Build Release APK
-        working-directory: customer_app
-        run: |
-          flutter build apk --release \
-            --dart-define=SUPABASE_URL="${{ secrets.SUPABASE_URL }}" \
-            --dart-define=SUPABASE_KEY="${{ secrets.SUPABASE_KEY }}"
+        working-directory: /tmp/mada_pay_customer
+        run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload Customer APK
         uses: actions/upload-artifact@v4
         with:
-          name: customer-app-apk
-          path: customer_app/build/app/outputs/flutter-apk/app-release.apk
+          name: mada-pay-customer-release
+          path: /tmp/mada_pay_customer/build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
-          retention-days: 7
