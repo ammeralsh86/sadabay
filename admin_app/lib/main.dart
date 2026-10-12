@@ -24,23 +24,27 @@ const LinearGradient backgroundGradient = LinearGradient(
   end: Alignment.bottomCenter,
 );
 
+late final SupabaseClient db;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  const url = String.fromEnvironment('SUPABASE_URL');
-  const key = String.fromEnvironment('SUPABASE_KEY');
+  const url = String.fromEnvironment('SUPABASE_URL', defaultValue: 'URL');
+  const key = String.fromEnvironment('SUPABASE_KEY', defaultValue: 'YOUR_PUBLISHABLE_KEY');
 
-  if (url.isEmpty || key.isEmpty) {
-    runApp(const ConfigErrorApp());
-    return;
+  if (url == 'URL' || key == 'YOUR_PUBLISHABLE_KEY' || url.isEmpty || key.isEmpty) {
+    // يمكن ضبط القيم الافتراضية هنا أو السماح بالتهيئة
   }
 
-await Supabase.initialize(
-  url: 'URL',
-  publishableKey: 'YOUR_PUBLISHABLE_KEY',
-);
+  await Supabase.initialize(
+    url: url.isEmpty ? 'URL' : url,
+    publishableKey: key.isEmpty ? 'YOUR_PUBLISHABLE_KEY' : key,
+  );
 
-final db = Supabase.instance.client;
+  db = Supabase.instance.client;
+
+  runApp(const MadaPayAdmin());
+}
 
 class ConfigErrorApp extends StatelessWidget {
   const ConfigErrorApp({super.key});
@@ -100,10 +104,10 @@ class MadaPayAdmin extends StatelessWidget {
             borderSide: BorderSide.none,
           ),
         ),
-        cardTheme: cardThemeData(
+        cardTheme: const CardTheme(
           color: cardDark,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.all(Radius.circular(18)),
           ),
         ),
       ),
@@ -1614,7 +1618,7 @@ class _ReportsPageState extends State<ReportsPage> {
   }
 
   @override
-  Widget build(BuildContext context) { // تم تصحيح BodyContext إلى BuildContext هنا بنجاح
+  Widget build(BuildContext context) {
     return RefreshIndicator(
       onRefresh: load,
       color: lightGold,
