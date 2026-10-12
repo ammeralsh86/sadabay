@@ -79,7 +79,7 @@ class UpdateChecker {
           context,
           currentVersion,
           latest,
-          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
+          notes?.isNotEmpty == true ? notes! : 'يوجد تحديث جديد يحسن الأداء.',
           apkUrl,
           isForce,
         );
@@ -92,7 +92,7 @@ class UpdateChecker {
           context,
           currentVersion,
           latest,
-          notes?.isNotEmpty == true ? notes : 'يوجد تحديث جديد يحسن الأداء.',
+          notes?.isNotEmpty == true ? notes! : 'يوجد تحديث جديد يحسن الأداء.',
           apkUrl,
           true,
         );
