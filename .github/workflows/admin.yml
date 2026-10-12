@@ -37,20 +37,39 @@ jobs:
         shell: bash
         run: |
           set -e
-
           mkdir -p /tmp/mada_admin_android
           cd /tmp/mada_admin_android
 
           flutter create \
             --platforms=android \
             --project-name=mada_pay_admin \
-            --org=com.madapay \
-            .
+            --org=com.madapay .
 
           cd "$GITHUB_WORKSPACE/admin_app"
-
           rm -rf android
           cp -R /tmp/mada_admin_android/android ./android
+
+      - name: Configure Android SDK
+        working-directory: admin_app
+        shell: bash
+        run: |
+          set -e
+          FILE="android/app/build.gradle"
+
+          if [ ! -f "$FILE" ]; then
+            FILE="android/app/build.gradle.kts"
+          fi
+
+          if [ ! -f "$FILE" ]; then
+            echo "Android app Gradle file not found"
+            exit 1
+          fi
+
+          if [[ "$FILE" == *.kts ]]; then
+            sed -i '/android[[:space:]]*{/a\    compileSdk = 35' "$FILE"
+          else
+            sed -i '/android[[:space:]]*{/a\    compileSdkVersion 35' "$FILE"
+          fi
 
       - name: Get Dependencies
         working-directory: admin_app
@@ -70,4 +89,4 @@ jobs:
         with:
           name: mada-pay-admin
           path: admin_app/build/app/outputs/flutter-apk/app-release.apk
-          if-no-files-found: error
+          if-no-files-found: error 
