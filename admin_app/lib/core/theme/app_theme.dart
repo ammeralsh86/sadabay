@@ -5,11 +5,10 @@ class AppTheme {
     return ThemeData(
       primarySwatch: Colors.blue,
       scaffoldBackgroundColor: Colors.grey[100],
-      // استخدام الكلاس الصحيح CardTheme بدلاً من CardThemeData
-      cardTheme: CardTheme(
+      cardTheme: const CardTheme(
         elevation: 2,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
         color: Colors.white,
       ),
