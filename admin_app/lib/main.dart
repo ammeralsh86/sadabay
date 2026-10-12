@@ -35,9 +35,10 @@ Future<void> main() async {
     return;
   }
 
-  await Supabase.initialize(url: url, anonKey: key);
-  runApp(const MadaPayAdmin());
-}
+await Supabase.initialize(
+  url: 'URL',
+  publishableKey: 'YOUR_PUBLISHABLE_KEY',
+);
 
 final db = Supabase.instance.client;
 
@@ -99,7 +100,7 @@ class MadaPayAdmin extends StatelessWidget {
             borderSide: BorderSide.none,
           ),
         ),
-        cardTheme: CardThemeData(
+        cardTheme: cardThemeData(
           color: cardDark,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
